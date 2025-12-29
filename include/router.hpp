@@ -24,6 +24,7 @@ public:
         STATIC_HASH,      // Baseline: simple hash
         LOAD_AWARE,       // Detecta y redistribuye hotspots
         CONSISTENT_HASH,  // Virtual nodes
+        VIRTUAL_NODES,    // Alias for CONSISTENT_HASH (for compatibility)
         INTELLIGENT       // Híbrido adaptativo
     };
 
@@ -57,6 +58,14 @@ private:
     // Detección de ataques
     std::atomic<size_t> suspicious_patterns_{0};
     std::atomic<size_t> blocked_redirects_{0};
+
+    // Cache para Intelligent strategy (evita llamar get_stats() en cada routing)
+    mutable std::atomic<size_t> ops_since_cache_update_{0};
+    mutable std::atomic<bool> cached_has_hotspot_{false};
+    mutable std::atomic<double> cached_balance_score_{1.0};
+    mutable std::atomic<size_t> adaptive_interval_{10};  // Intervalo adaptativo
+    static constexpr size_t MIN_CACHE_INTERVAL = 10;     // Mínimo: reactivo
+    static constexpr size_t MAX_CACHE_INTERVAL = 500;    // Máximo: eficiente
 
     // Configuración
     static constexpr size_t VNODES_PER_SHARD = 16;
@@ -173,6 +182,7 @@ public:
                 break;
 
             case Strategy::CONSISTENT_HASH:
+            case Strategy::VIRTUAL_NODES:
                 target_shard = route_consistent_hash(key);
                 break;
 
@@ -283,8 +293,25 @@ public:
     }
 
 private:
+    // Hash robusto (Murmur3 finalizer) - consistente entre compiladores
+    size_t robust_hash(const Key& key) const {
+        size_t h = std::hash<Key>{}(key);
+        h ^= h >> 33;
+        h *= 0xff51afd7ed558ccdULL;
+        h ^= h >> 33;
+        h *= 0xc4ceb9fe1a85ec53ULL;
+        h ^= h >> 33;
+        return h;
+    }
+
+    // Hash débil (identity) - SOLO PARA TESTING de balanceo bajo ataque
+    // Permite ataques triviales: keys múltiplos de num_shards van al shard 0
+    size_t weak_hash(const Key& key) const {
+        return std::hash<Key>{}(key);  // Identity en GCC, scrambled en ICX
+    }
+
     size_t route_static_hash(const Key& key) const {
-        return hash1(key) % num_shards_;
+        return robust_hash(key) % num_shards_;
     }
 
     size_t route_load_aware(const Key& key, size_t natural_shard) {
@@ -343,15 +370,63 @@ private:
     }
 
     size_t route_intelligent(const Key& key, size_t natural_shard) {
-        auto stats = get_stats();
+        // Fast path: si está estable, usar static hash directamente (mismo costo que STATIC_HASH)
+        size_t interval = adaptive_interval_.load(std::memory_order_relaxed);
+        if (interval >= MAX_CACHE_INTERVAL) {
+            // Sistema estable - bypasear todo el overhead
+            return natural_shard;
+        }
+
+        // Actualizar cache periódicamente
+        size_t ops = ops_since_cache_update_.fetch_add(1, std::memory_order_relaxed);
+        if (ops >= interval) {
+            ops_since_cache_update_.store(0, std::memory_order_relaxed);
+            update_stats_cache();
+        }
+
+        // Usar valores cacheados
+        bool has_hotspot = cached_has_hotspot_.load(std::memory_order_relaxed);
+        double balance = cached_balance_score_.load(std::memory_order_relaxed);
 
         // Si hay hotspot o desbalance, usar load-aware
-        if (stats.has_hotspot || stats.balance_score < 0.8) {
+        if (has_hotspot || balance < 0.9) {
             return route_load_aware(key, natural_shard);
         }
 
-        // Si está balanceado, usar consistent hashing
-        return route_consistent_hash(key);
+        // Balanceado - usar natural shard (rápido)
+        return natural_shard;
+    }
+
+    void update_stats_cache() const {
+        size_t total = 0, min_load = SIZE_MAX, max_load = 0;
+        
+        for (size_t i = 0; i < num_shards_; ++i) {
+            size_t load = shard_loads_[i].load(std::memory_order_relaxed);
+            total += load;
+            min_load = std::min(min_load, load);
+            max_load = std::max(max_load, load);
+        }
+
+        double avg = total / static_cast<double>(num_shards_);
+        
+        // Balance score simplificado
+        double balance = (avg > 0) ? std::max(0.0, 1.0 - static_cast<double>(max_load - min_load) / (2.0 * avg)) : 1.0;
+        bool hotspot = (max_load > HOTSPOT_THRESHOLD * avg);
+        
+        cached_balance_score_.store(balance, std::memory_order_relaxed);
+        cached_has_hotspot_.store(hotspot, std::memory_order_relaxed);
+        
+        // Adaptar intervalo: más frecuente si hay problemas, menos si está estable
+        size_t new_interval;
+        if (hotspot || balance < 0.8) {
+            new_interval = MIN_CACHE_INTERVAL;  // Reactivo bajo ataque
+        } else if (balance > 0.95) {
+            new_interval = MAX_CACHE_INTERVAL;  // Eficiente cuando estable
+        } else {
+            new_interval = MIN_CACHE_INTERVAL + 
+                static_cast<size_t>((balance - 0.8) * (MAX_CACHE_INTERVAL - MIN_CACHE_INTERVAL) / 0.15);
+        }
+        adaptive_interval_.store(new_interval, std::memory_order_relaxed);
     }
 };
 

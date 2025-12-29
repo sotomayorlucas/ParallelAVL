@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-<parameter name="chrono">
+#include <chrono>
 #include <iomanip>
 #include <random>
 #include <algorithm>

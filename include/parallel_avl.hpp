@@ -31,6 +31,16 @@ public:
     using RouterStrategy = typename Router::Strategy;
 
 private:
+    // Hash robusto (Murmur3 finalizer) - consistente entre compiladores
+    static size_t robust_hash(const Key& key) {
+        size_t h = std::hash<Key>{}(key);
+        h ^= h >> 33;
+        h *= 0xff51afd7ed558ccdULL;
+        h ^= h >> 33;
+        h *= 0xc4ceb9fe1a85ec53ULL;
+        h ^= h >> 33;
+        return h;
+    }
 
     size_t num_shards_;
     std::vector<std::unique_ptr<Shard>> shards_;
@@ -65,18 +75,25 @@ public:
         total_ops_.fetch_add(1, std::memory_order_relaxed);
 
         // Determinar shard via router (puede haber redirección)
-        size_t natural_shard = std::hash<Key>{}(key) % num_shards_;
+        size_t natural_shard = robust_hash(key) % num_shards_;
         size_t target_shard = router_->route(key);
 
+        // Capturar tamaño antes de insertar
+        size_t old_size = shards_[target_shard]->size();
+        
         // Insertar en el shard target
         shards_[target_shard]->insert(key, value);
-
-        // Notificar al router
-        router_->record_insertion(target_shard);
-
-        // Si hubo redirección, registrar en el índice
-        if (target_shard != natural_shard) {
-            redirect_index_->record_redirect(key, natural_shard, target_shard);
+        
+        // Solo notificar al router si realmente se insertó una key nueva
+        // FIX: Evita inflar shard_loads_ con duplicados
+        size_t new_size = shards_[target_shard]->size();
+        if (new_size > old_size) {
+            router_->record_insertion(target_shard);
+            
+            // Si hubo redirección, registrar en el índice
+            if (target_shard != natural_shard) {
+                redirect_index_->record_redirect(key, natural_shard, target_shard);
+            }
         }
     }
 
@@ -85,7 +102,7 @@ public:
         total_ops_.fetch_add(1, std::memory_order_relaxed);
 
         // Paso 1: Buscar en shard natural
-        size_t natural_shard = std::hash<Key>{}(key) % num_shards_;
+        size_t natural_shard = robust_hash(key) % num_shards_;
 
         if (shards_[natural_shard]->contains(key)) {
             return true;
@@ -108,7 +125,7 @@ public:
         total_ops_.fetch_add(1, std::memory_order_relaxed);
 
         // Paso 1: Buscar en shard natural
-        size_t natural_shard = std::hash<Key>{}(key) % num_shards_;
+        size_t natural_shard = robust_hash(key) % num_shards_;
         auto result = shards_[natural_shard]->get(key);
 
         if (result.has_value()) {
@@ -131,7 +148,7 @@ public:
         total_ops_.fetch_add(1, std::memory_order_relaxed);
 
         // Buscar en shard natural primero
-        size_t natural_shard = std::hash<Key>{}(key) % num_shards_;
+        size_t natural_shard = robust_hash(key) % num_shards_;
 
         if (shards_[natural_shard]->remove(key)) {
             router_->record_removal(natural_shard);

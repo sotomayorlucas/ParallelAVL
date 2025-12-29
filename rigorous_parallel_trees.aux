@@ -1,0 +1,157 @@
+\relax 
+\citation{bronson2010}
+\citation{ellen2010}
+\citation{shavit1997}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Motivating Example}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}Key Challenges}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-C}}Our Contributions}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Background and Related Work}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Concurrent Tree Structures}{1}{}\protected@file@percent }
+\citation{karger1997}
+\citation{azar1999}
+\citation{gray1994}
+\citation{cooper2010}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces System architecture with production improvements}}{2}{}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{2}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Load Balancing Strategies}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Workload Characterization}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Architecture}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Tree-of-Trees Design}{2}{}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Deadlock-Free Migration}}{2}{}\protected@file@percent }
+\newlabel{alg:migration}{{1}{2}{}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Routing Strategies}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Correctness Guarantees}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Linearizability}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Adversary Resistance}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Lock Ordering}{2}{}\protected@file@percent }
+\citation{gray1994}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Cached Load Statistics}}{3}{}\protected@file@percent }
+\newlabel{alg:cached_stats}{{2}{3}{}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Performance Optimizations}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}CachedLoadStats: O(1) Routing}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Range Query Optimization}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Garbage Collection}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Scalability (Uniform Workload, 1M ops)}}{3}{}\protected@file@percent }
+\newlabel{tab:scalability}{{I}{3}{}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Experimental Methodology}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Workload Characterization}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Statistical Rigor}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Hardware Setup}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Thread scaling comparison across routing strategies (8 shards, 100K ops/thread). All strategies maintain 99\%+ balance.}}{4}{}\protected@file@percent }
+\newlabel{fig:thread_scaling}{{2}{4}{}{figure.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Latency Percentiles (8 threads, Zipfian)}}{4}{}\protected@file@percent }
+\newlabel{tab:latency}{{II}{4}{}{table.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Experimental Results}{4}{}\protected@file@percent }
+\newlabel{sec:experiments}{{VII}{4}{}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-A}}Scalability Analysis}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-B}}Latency Distribution}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-C}}Attack Resistance}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-D}}Routing Strategy Comparison}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Balance Under Adversarial Workload}}{4}{}\protected@file@percent }
+\newlabel{tab:adversarial}{{III}{4}{}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Balance under adversarial attack: before vs after implementing robust hash. Static Hash improves from 0\% to 96\% balance.}}{4}{}\protected@file@percent }
+\newlabel{fig:adversarial_comparison}{{3}{4}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-E}}Range Query Performance}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-F}}Garbage Collection Impact}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Validation and Testing}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-A}}Test Coverage}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Routing Strategy Performance (8 threads)}}{5}{}\protected@file@percent }
+\newlabel{tab:routing}{{IV}{5}{}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Shard scaling performance (8 threads, 100K ops/thread). Throughput increases with shard count due to reduced lock contention.}}{5}{}\protected@file@percent }
+\newlabel{fig:shard_scaling}{{4}{5}{}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Range Query Performance (100K keys, 8 shards)}}{5}{}\protected@file@percent }
+\newlabel{tab:range}{{V}{5}{}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}Correctness Arguments}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Configuration Parameters Analyzed}}{5}{}\protected@file@percent }
+\newlabel{tab:parameters}{{VI}{5}{}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Parameter Sensitivity Analysis}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-A}}Parameters Under Study}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-B}}Shard Count Sensitivity}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-C}}Hotspot Threshold Sensitivity}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Shard Count Sensitivity Analysis}}{6}{}\protected@file@percent }
+\newlabel{tab:shards_sensitivity}{{VII}{6}{}{table.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Hotspot Threshold Sensitivity}}{6}{}\protected@file@percent }
+\newlabel{tab:hotspot_sensitivity}{{VIII}{6}{}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-D}}Anti-Thrashing Parameter Sensitivity}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-E}}Parameter Interaction Effects}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-F}}Sensitivity Ranking}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-G}}Recommended Configurations}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IX}{\ignorespaces Anti-Thrashing Parameter Sensitivity}}{6}{}\protected@file@percent }
+\newlabel{tab:antithrash}{{IX}{6}{}{table.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {X}{\ignorespaces Interaction: Shards $\times $ Threshold (Adversarial Balance)}}{6}{}\protected@file@percent }
+\newlabel{tab:interaction}{{X}{6}{}{table.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-H}}Sensitivity Analysis Conclusions}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {X}Intel Core Ultra 7 Experiments}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-A}}Shard Scaling on Hybrid Architecture}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XI}{\ignorespaces Shard Scaling on Intel Core Ultra 7 155H (8 threads)}}{7}{}\protected@file@percent }
+\newlabel{tab:intel_shards}{{XI}{7}{}{table.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XII}{\ignorespaces Latency Distribution (nanoseconds) on Intel Core Ultra 7}}{7}{}\protected@file@percent }
+\newlabel{tab:intel_latency}{{XII}{7}{}{table.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-B}}Latency Distribution Analysis}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-C}}Workload Characterization}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-D}}Read/Write Ratio Impact}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-E}}Compiler Comparison: ICX vs GCC}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XIII}{\ignorespaces Workload Comparison on Intel Core Ultra 7 (8 shards, 8 threads)}}{7}{}\protected@file@percent }
+\newlabel{tab:intel_workload}{{XIII}{7}{}{table.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XIV}{\ignorespaces Read/Write Ratio Performance (8 shards, 8 threads)}}{7}{}\protected@file@percent }
+\newlabel{tab:intel_rw}{{XIV}{7}{}{table.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-F}}Optimized Compiler Comparison}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-G}}Fair Comparison: Original Implementation}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XV}{\ignorespaces Compiler Comparison: ICX vs GCC on Intel Core Ultra 7 (After Fixes)}}{8}{}\protected@file@percent }
+\newlabel{tab:compiler_cmp}{{XV}{8}{}{table.15}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XVI}{\ignorespaces Shard Scaling Comparison (8 threads, After Fixes)}}{8}{}\protected@file@percent }
+\newlabel{tab:shard_cmp}{{XVI}{8}{}{table.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-H}}Benchmark Implementation Differences}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-I}}Heavy Benchmark Results (1M+ Operations)}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-J}}Intel Experiments Summary}{8}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GCC vs ICX performance comparison after fixes. GCC excels single-threaded (+55\%), ICX excels at mixed workloads (+54\%).}}{8}{}\protected@file@percent }
+\newlabel{fig:gcc_vs_icx}{{5}{8}{}{figure.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XVII}{\ignorespaces Adversarial Workload: Before vs After Fixes}}{8}{}\protected@file@percent }
+\newlabel{tab:workload_cmp}{{XVII}{8}{}{table.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {XI}Design Issues Identified and Fixes}{8}{}\protected@file@percent }
+\newlabel{sec:bugs_fixes}{{XI}{8}{}{section.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XI-A}}Issue 1: Inflated Load Counting}{8}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XVIII}{\ignorespaces Optimized Compiler Comparison (After Fixes)}}{9}{}\protected@file@percent }
+\newlabel{tab:opt_compiler}{{XVIII}{9}{}{table.18}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XIX}{\ignorespaces Adversarial Resistance with Optimized Compilers (After Fixes)}}{9}{}\protected@file@percent }
+\newlabel{tab:opt_adv}{{XIX}{9}{}{table.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XI-B}}Issue 2: Compiler-Dependent Hash Function}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XI-C}}Issue 3: Inefficient Intelligent Strategy}{9}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XX}{\ignorespaces Fair Comparison: Same Code, Different Compilers}}{9}{}\protected@file@percent }
+\newlabel{tab:fair_cmp}{{XX}{9}{}{table.20}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXI}{\ignorespaces Workload Performance with Original Code}}{9}{}\protected@file@percent }
+\newlabel{tab:fair_workload}{{XXI}{9}{}{table.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XI-D}}Impact of Fixes}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {XII}Limitations and Future Work}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XII-A}}Current Limitations}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XII-B}}Future Directions}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {XIII}Conclusion}{9}{}\protected@file@percent }
+\bibcite{bronson2010}{1}
+\bibcite{ellen2010}{2}
+\bibcite{shavit1997}{3}
+\bibcite{karger1997}{4}
+\bibcite{azar1999}{5}
+\bibcite{gray1994}{6}
+\bibcite{cooper2010}{7}
+\bibcite{herlihy2008}{8}
+\bibcite{lea2000}{9}
+\bibcite{michael2002}{10}
+\@writefile{lot}{\contentsline {table}{\numberline {XXII}{\ignorespaces Benchmark Implementation Comparison}}{10}{}\protected@file@percent }
+\newlabel{tab:bench_diff}{{XXII}{10}{}{table.22}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXIII}{\ignorespaces Heavy Scalability Test (1M ops, 16 shards)}}{10}{}\protected@file@percent }
+\newlabel{tab:heavy_scale}{{XXIII}{10}{}{table.23}{}}
+\@writefile{toc}{\contentsline {section}{References}{10}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {XXIV}{\ignorespaces Heavy Shard Scaling (1M ops, 8 threads)}}{10}{}\protected@file@percent }
+\newlabel{tab:heavy_shard}{{XXIV}{10}{}{table.24}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXV}{\ignorespaces Heavy Workload Comparison (500K ops)}}{10}{}\protected@file@percent }
+\newlabel{tab:heavy_workload}{{XXV}{10}{}{table.25}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXVI}{\ignorespaces Heavy Latency Analysis (100K samples)}}{10}{}\protected@file@percent }
+\newlabel{tab:heavy_latency}{{XXVI}{10}{}{table.26}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXVII}{\ignorespaces Sustained Load Test (5M ops, 8 threads, 16 shards)}}{10}{}\protected@file@percent }
+\newlabel{tab:sustained}{{XXVII}{10}{}{table.27}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Overview of the three design issues identified and their fixes. Each fix addresses a specific symptom that contributed to the apparent compiler-specific behavior.}}{10}{}\protected@file@percent }
+\newlabel{fig:bugs_overview}{{6}{10}{}{figure.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XXVIII}{\ignorespaces Performance Impact of Fixes}}{10}{}\protected@file@percent }
+\newlabel{tab:fixes_impact}{{XXVIII}{10}{}{table.28}{}}
+\gdef \@abspage@last{10}
