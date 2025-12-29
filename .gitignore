@@ -21,6 +21,23 @@ paper/*.blg
 paper/*.pdf
 paper/*.synctex.gz
 
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.bbl
+docs/*.blg
+docs/*.pdf
+docs/*.synctex.gz
+
+*.toc
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.pdf
+*.synctex.gz
+
 # IDE
 .vscode/
 .idea/

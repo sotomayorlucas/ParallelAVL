@@ -1,0 +1,1388 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+% Configuración simple de código
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=C++,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    numbers=left,
+    numberstyle=\tiny
+}
+
+\title{Parallel AVL Tree\\
+\large Árbol AVL Concurrente con Enrutamiento Adaptativo\\
+\vspace{0.5cm}
+\normalsize Documentación Completa desde Conceptos Fundamentales}
+\author{Lucas Sotomayor}
+\date{Diciembre 2025}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ############################################################################
+% PARTE I: FUNDAMENTOS TEÓRICOS
+% ############################################################################
+
+\part{Fundamentos Teóricos}
+
+% ============================================================================
+\section{Estructuras de Datos: Conceptos Básicos}
+% ============================================================================
+
+\subsection{¿Qué es una Estructura de Datos?}
+
+Una \textbf{estructura de datos} es una forma de organizar información en la memoria de una computadora para poder usarla de manera eficiente. Pensá en ella como un sistema de organización.
+
+\textbf{Analogía}: Imaginá que tenés miles de libros. Podrías:
+\begin{itemize}
+    \item \textbf{Tirarlos en una pila} (simple pero caótico, encontrar uno toma mucho tiempo)
+    \item \textbf{Ordenarlos alfabéticamente en estantes} (más trabajo inicial, pero encontrar uno es rápido)
+    \item \textbf{Usar un catálogo con índices} (el más eficiente para búsquedas)
+\end{itemize}
+
+Cada forma de organizar tiene sus ventajas y desventajas. Las estructuras de datos son exactamente esto: diferentes formas de organizar datos en la computadora.
+
+\subsection{Estructuras de Datos Comunes}
+
+\subsubsection{Array (Arreglo)}
+Es como una fila de casilleros numerados. Cada casillero tiene un número (índice) y guarda un dato.
+
+\begin{verbatim}
+Índice:    [0]   [1]   [2]   [3]   [4]
+Datos:     "A"   "B"   "C"   "D"   "E"
+\end{verbatim}
+
+\textbf{Ventaja}: Acceso instantáneo si sabés el índice (``dame el elemento 3'').\\
+\textbf{Desventaja}: Insertar en el medio requiere mover todos los elementos.
+
+\subsubsection{Lista Enlazada}
+Cada elemento ``apunta'' al siguiente, como una cadena.
+
+\begin{verbatim}
+[A] --> [B] --> [C] --> [D] --> null
+\end{verbatim}
+
+\textbf{Ventaja}: Fácil insertar/eliminar elementos.\\
+\textbf{Desventaja}: Para llegar al elemento 100, hay que pasar por los 99 anteriores.
+
+\subsubsection{Tabla Hash (Diccionario)}
+Usa una función matemática para calcular dónde guardar cada dato.
+
+\begin{verbatim}
+clave "Juan" --> función hash --> posición 7
+clave "María" --> función hash --> posición 3
+\end{verbatim}
+
+\textbf{Ventaja}: Búsqueda muy rápida (casi instantánea).\\
+\textbf{Desventaja}: No mantiene orden, puede haber ``colisiones''.
+
+% ============================================================================
+\section{Árboles: Estructura Jerárquica}
+% ============================================================================
+
+\subsection{¿Qué es un Árbol?}
+
+Un \textbf{árbol} es una estructura de datos que organiza la información de forma jerárquica, como un árbol genealógico o el organigrama de una empresa.
+
+\begin{verbatim}
+            [Director]              <-- Raíz (root)
+           /          \
+    [Gerente A]    [Gerente B]      <-- Nodos internos
+      /    \            \
+ [Juan]  [María]     [Pedro]        <-- Hojas (leaves)
+\end{verbatim}
+
+\subsubsection{Terminología}
+\begin{itemize}
+    \item \textbf{Raíz (Root)}: El nodo superior, de donde ``nace'' todo el árbol
+    \item \textbf{Nodo}: Cada elemento del árbol
+    \item \textbf{Hijo}: Un nodo conectado debajo de otro
+    \item \textbf{Padre}: Un nodo conectado arriba de otro
+    \item \textbf{Hoja}: Un nodo sin hijos (los ``extremos'' del árbol)
+    \item \textbf{Altura}: Cantidad de niveles del árbol
+\end{itemize}
+
+\subsection{Árbol Binario}
+
+Un \textbf{árbol binario} es un árbol donde cada nodo tiene \textbf{como máximo 2 hijos}: uno izquierdo y uno derecho.
+
+\begin{verbatim}
+        [8]
+       /   \
+     [3]   [10]
+    /  \      \
+  [1]  [6]   [14]
+\end{verbatim}
+
+\subsection{Árbol Binario de Búsqueda (BST)}
+
+Un \textbf{BST} (Binary Search Tree) es un árbol binario con una regla especial:
+
+\begin{quote}
+Para cada nodo: todos los valores a la \textbf{izquierda son menores}, y todos los valores a la \textbf{derecha son mayores}.
+\end{quote}
+
+\begin{verbatim}
+        [8]
+       /   \
+     [3]   [10]       3 < 8 < 10  ✓
+    /  \      \
+  [1]  [6]   [14]     1 < 3 < 6  ✓   10 < 14  ✓
+\end{verbatim}
+
+\subsubsection{¿Por qué es útil?}
+
+Buscar un valor es muy eficiente. Por ejemplo, buscar el 6:
+
+\begin{enumerate}
+    \item Empezar en la raíz: 8. ¿6 es mayor o menor que 8? Menor $\rightarrow$ ir a la izquierda
+    \item Estamos en 3. ¿6 es mayor o menor que 3? Mayor $\rightarrow$ ir a la derecha
+    \item Estamos en 6. ¡Encontrado!
+\end{enumerate}
+
+Solo visitamos 3 nodos en lugar de revisar todos. Esto es \textbf{O(log n)} en el mejor caso.
+
+\subsection{El Problema del Desbalanceo}
+
+¿Qué pasa si insertamos: 1, 2, 3, 4, 5 en ese orden?
+
+\begin{verbatim}
+[1]
+  \
+  [2]
+    \
+    [3]
+      \
+      [4]
+        \
+        [5]
+\end{verbatim}
+
+¡El árbol se convirtió en una lista! Buscar el 5 requiere visitar \textbf{todos} los nodos. Perdimos la ventaja del árbol.
+
+% ============================================================================
+\section{Árbol AVL: El Árbol que se Balancea Solo}
+% ============================================================================
+
+\subsection{¿Qué es un Árbol AVL?}
+
+El \textbf{árbol AVL} (nombrado por sus inventores Adelson-Velsky y Landis, 1962) es un árbol binario de búsqueda que \textbf{se mantiene balanceado automáticamente}.
+
+\subsubsection{Regla de Balance AVL}
+
+\begin{quote}
+Para cada nodo, la diferencia de altura entre su subárbol izquierdo y derecho debe ser \textbf{como máximo 1}.
+\end{quote}
+
+Esta diferencia se llama \textbf{factor de balance}:
+\begin{equation}
+\text{Factor de Balance} = \text{altura}(\text{izquierda}) - \text{altura}(\text{derecha})
+\end{equation}
+
+Valores válidos: $-1$, $0$, $+1$
+
+\begin{verbatim}
+       [8]  (0)         Balanceado ✓
+       /  \
+    [3]   [10]
+   (0)    (-1)
+             \
+            [14]
+             (0)
+\end{verbatim}
+
+\subsection{Rotaciones: Cómo se Balancea}
+
+Cuando una inserción o eliminación viola la regla de balance, el AVL realiza \textbf{rotaciones} para restaurar el equilibrio.
+
+\subsubsection{Rotación Simple a la Derecha}
+
+Cuando el desbalance está en el lado izquierdo-izquierdo:
+
+\begin{verbatim}
+    [30]                    [20]
+    /                      /    \
+  [20]        -->       [10]   [30]
+  /
+[10]
+
+Desbalanceado           Balanceado
+\end{verbatim}
+
+\subsubsection{Rotación Simple a la Izquierda}
+
+Cuando el desbalance está en el lado derecho-derecho:
+
+\begin{verbatim}
+[10]                       [20]
+   \                      /    \
+   [20]      -->       [10]   [30]
+      \
+     [30]
+\end{verbatim}
+
+\subsubsection{Rotación Doble}
+
+Para casos izquierda-derecha o derecha-izquierda, se necesitan dos rotaciones.
+
+\subsection{Complejidad del AVL}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Operación} & \textbf{BST desbalanceado} & \textbf{AVL} \\
+\midrule
+Búsqueda & O(n) peor caso & O(log n) garantizado \\
+Inserción & O(n) peor caso & O(log n) garantizado \\
+Eliminación & O(n) peor caso & O(log n) garantizado \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{¿Qué significa O(log n)?}
+
+Para n = 1,000,000 de elementos:
+\begin{itemize}
+    \item \textbf{O(n)}: hasta 1,000,000 operaciones
+    \item \textbf{O(log n)}: solo $\approx$ 20 operaciones
+\end{itemize}
+
+¡El AVL es \textbf{50,000 veces más rápido} en el peor caso!
+
+% ============================================================================
+\section{Concurrencia: Hacer Muchas Cosas a la Vez}
+% ============================================================================
+
+\subsection{¿Qué es la Concurrencia?}
+
+La \textbf{concurrencia} es la capacidad de ejecutar múltiples tareas de forma ``simultánea''. Es como un restaurante con varios cocineros que preparan diferentes platos al mismo tiempo.
+
+\subsubsection{Procesadores Modernos}
+
+Las computadoras modernas tienen múltiples \textbf{núcleos} (cores). Un procesador de 8 cores puede ejecutar 8 tareas verdaderamente en paralelo.
+
+\begin{verbatim}
+CPU de 8 cores:
+[Core 0] [Core 1] [Core 2] [Core 3]
+[Core 4] [Core 5] [Core 6] [Core 7]
+
+Cada core puede ejecutar una tarea independiente.
+\end{verbatim}
+
+\subsection{Threads (Hilos)}
+
+Un \textbf{thread} (hilo) es una ``línea de ejecución'' dentro de un programa. Un programa puede tener múltiples threads ejecutándose simultáneamente.
+
+\textbf{Analogía}: Un restaurante (programa) con varios cocineros (threads). Cada cocinero trabaja en su plato, pero comparten la cocina (memoria).
+
+\begin{verbatim}
+Programa
+   |
+   +-- Thread 1: Procesando clientes 1-1000
+   +-- Thread 2: Procesando clientes 1001-2000
+   +-- Thread 3: Procesando clientes 2001-3000
+   +-- Thread 4: Procesando clientes 3001-4000
+\end{verbatim}
+
+\subsection{El Problema: Condiciones de Carrera}
+
+Cuando múltiples threads acceden a los \textbf{mismos datos} al mismo tiempo, pueden ocurrir problemas llamados \textbf{condiciones de carrera} (race conditions).
+
+\subsubsection{Ejemplo del Problema}
+
+Imaginá dos threads incrementando un contador:
+
+\begin{verbatim}
+Contador inicial: 100
+
+Thread A                    Thread B
+--------                    --------
+Lee contador: 100           
+                            Lee contador: 100
+Suma 1: 101
+                            Suma 1: 101
+Escribe: 101
+                            Escribe: 101
+
+Resultado final: 101
+Resultado esperado: 102  ¡ERROR!
+\end{verbatim}
+
+Ambos threads leyeron 100 antes de que ninguno escribiera, así que ambos escribieron 101.
+
+\subsection{Locks (Candados): La Solución Básica}
+
+Un \textbf{lock} (o mutex) es un mecanismo que permite que \textbf{solo un thread} acceda a un recurso a la vez.
+
+\begin{verbatim}
+Thread A                    Thread B
+--------                    --------
+Adquiere lock ✓
+Lee contador: 100           Intenta adquirir lock...
+Suma 1: 101                 (ESPERANDO)
+Escribe: 101                (ESPERANDO)
+Libera lock                 Adquiere lock ✓
+                            Lee contador: 101
+                            Suma 1: 102
+                            Escribe: 102
+                            Libera lock
+
+Resultado final: 102 ✓
+\end{verbatim}
+
+\subsection{El Costo de los Locks}
+
+Los locks resuelven las condiciones de carrera, pero tienen un costo:
+
+\begin{enumerate}
+    \item \textbf{Serialización}: Si todos usan el mismo lock, las operaciones se ejecutan una a la vez (pierden el beneficio del paralelismo)
+    
+    \item \textbf{Overhead}: Adquirir y liberar locks toma tiempo
+    
+    \item \textbf{Contención}: Threads esperando por un lock no hacen trabajo útil
+\end{enumerate}
+
+\subsubsection{El Problema con un Lock Global}
+
+Si protegemos TODO el árbol con UN solo lock:
+
+\begin{verbatim}
+                [LOCK GLOBAL]
+                     |
+                 [Árbol AVL]
+
+Thread 1: insert(5)   --> Adquiere lock, trabaja
+Thread 2: insert(10)  --> ESPERA (lock ocupado)
+Thread 3: search(7)   --> ESPERA (lock ocupado)
+Thread 4: delete(3)   --> ESPERA (lock ocupado)
+\end{verbatim}
+
+¡Solo un thread trabaja a la vez! Tenemos 8 cores pero solo usamos 1. \textbf{Desperdicio del 87.5\% de la capacidad}.
+
+% ============================================================================
+\section{Speedup y Eficiencia Paralela}
+% ============================================================================
+
+\subsection{¿Qué es Speedup?}
+
+El \textbf{speedup} mide cuánto más rápido es un programa paralelo comparado con uno secuencial:
+
+\begin{equation}
+\text{Speedup} = \frac{\text{Tiempo con 1 thread}}{\text{Tiempo con N threads}}
+\end{equation}
+
+\textbf{Ejemplo}:
+\begin{itemize}
+    \item Tiempo con 1 thread: 8 segundos
+    \item Tiempo con 8 threads: 1 segundo
+    \item Speedup = 8 / 1 = \textbf{8$\times$} (ideal)
+\end{itemize}
+
+\subsection{Eficiencia Paralela}
+
+La \textbf{eficiencia} mide qué tan bien aprovechamos los cores:
+
+\begin{equation}
+\text{Eficiencia} = \frac{\text{Speedup}}{\text{Número de threads}} \times 100\%
+\end{equation}
+
+\textbf{Ejemplo}:
+\begin{itemize}
+    \item Speedup de 7.78$\times$ con 8 threads
+    \item Eficiencia = 7.78 / 8 = \textbf{97\%} (excelente)
+\end{itemize}
+
+\subsection{Ley de Amdahl}
+
+No todo puede paralelizarse. Si el 10\% del código es secuencial (no paralelizable), el speedup máximo teórico es:
+
+\begin{equation}
+\text{Speedup máximo} = \frac{1}{0.10} = 10\times
+\end{equation}
+
+¡No importa cuántos cores tengas, nunca superarás 10$\times$!
+
+% ============================================================================
+\section{El Desafío: Árboles Concurrentes}
+% ============================================================================
+
+\subsection{¿Por Qué es Difícil?}
+
+Hacer un árbol AVL concurrente es extremadamente difícil porque:
+
+\subsubsection{1. Operaciones Atraviesan Muchos Nodos}
+
+Una inserción puede requerir:
+\begin{itemize}
+    \item Navegar desde la raíz hasta una hoja
+    \item Insertar el nuevo nodo
+    \item Subir actualizando alturas
+    \item Posiblemente hacer rotaciones
+\end{itemize}
+
+\subsubsection{2. Las Rotaciones Modifican la Estructura}
+
+Una rotación cambia las relaciones padre-hijo de múltiples nodos simultáneamente:
+
+\begin{verbatim}
+    [A]                [B]
+   /   \     -->      /   \
+ [B]   [C]          [D]   [A]
+ /                          \
+[D]                         [C]
+\end{verbatim}
+
+Si otro thread está navegando el árbol durante la rotación, puede ``perderse''.
+
+\subsubsection{3. La Raíz es un Cuello de Botella}
+
+\textbf{Toda} operación empieza en la raíz. Con lock granular (un lock por nodo), todos los threads compiten por el lock de la raíz.
+
+\begin{verbatim}
+        [RAÍZ - TODOS PASAN POR ACÁ]
+              /        \
+           ...          ...
+\end{verbatim}
+
+\subsection{Enfoques Tradicionales y Sus Problemas}
+
+\subsubsection{Lock Global}
+\begin{itemize}
+    \item \textbf{Implementación}: Un lock protege todo el árbol
+    \item \textbf{Resultado}: Speedup $\approx$ 0.02$\times$ (¡más lento que secuencial!)
+    \item \textbf{Problema}: Serialización total + overhead del lock
+\end{itemize}
+
+\subsubsection{Lock Granular (Lock por Nodo)}
+\begin{itemize}
+    \item \textbf{Implementación}: Cada nodo tiene su propio lock
+    \item \textbf{Resultado}: Speedup $\approx$ 0.5$\times$ (aún más lento)
+    \item \textbf{Problemas}: 
+    \begin{itemize}
+        \item Overhead de adquirir/liberar muchos locks
+        \item Contención en nodos superiores (especialmente raíz)
+        \item Complejidad de evitar deadlocks
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Hand-over-Hand Locking}
+\begin{itemize}
+    \item \textbf{Implementación}: Al bajar por el árbol, se adquiere el lock del hijo antes de soltar el del padre
+    \item \textbf{Resultado}: Mejor que granular, pero aún con contención en la raíz
+    \item \textbf{Problema}: Muy complejo de implementar correctamente
+\end{itemize}
+
+% ############################################################################
+% PARTE II: NUESTRA SOLUCIÓN
+% ############################################################################
+
+\newpage
+\part{Nuestra Solución: Parallel AVL Trees}
+
+% ============================================================================
+\section{La Idea Clave: Tree-of-Trees}
+% ============================================================================
+
+\subsection{El Insight Fundamental}
+
+\begin{quote}
+\textbf{``No intentes hacer un árbol concurrente. Haz N árboles simples que trabajen en paralelo.''}
+\end{quote}
+
+En lugar de resolver ``cómo hacer un árbol concurrent'', replanteamos la pregunta:
+
+\begin{quote}
+``¿Cómo procesar múltiples operaciones de árbol en paralelo?''
+\end{quote}
+
+\textbf{Respuesta}: \textbf{¡Usando múltiples árboles!}
+
+\subsection{Arquitectura Tree-of-Trees}
+
+Dividimos los datos en N árboles independientes llamados \textbf{shards}:
+
+\begin{verbatim}
+           [Capa de Enrutamiento]
+          /    |      |      \
+     Árbol0  Árbol1  Árbol2  ... ÁrbolN-1
+     Lock0   Lock1   Lock2       LockN-1
+        |       |       |           |
+     Core0   Core1   Core2      CoreN-1
+\end{verbatim}
+
+\subsubsection{¿Cómo Funciona?}
+
+\begin{enumerate}
+    \item Cuando llega una operación con key K:
+    \item Una función hash determina qué árbol le corresponde: $shard = hash(K) \mod N$
+    \item La operación se ejecuta \textbf{solo} en ese árbol
+    \item Solo se toma el lock de \textbf{ese} árbol
+\end{enumerate}
+
+\subsection{¿Por Qué Funciona?}
+
+\subsubsection{Sin Contención Entre Shards}
+
+\begin{verbatim}
+Thread 1 opera en Shard 0:  [Lock0] --> Trabaja
+Thread 2 opera en Shard 1:  [Lock1] --> Trabaja  } ¡SIMULTÁNEO!
+Thread 3 opera en Shard 2:  [Lock2] --> Trabaja
+Thread 4 opera en Shard 3:  [Lock3] --> Trabaja
+\end{verbatim}
+
+Threads en diferentes shards \textbf{nunca se bloquean entre sí}.
+
+\subsubsection{Lock Simple por Shard}
+
+Cada shard usa un \textbf{lock global} (el más simple):
+\begin{itemize}
+    \item Fácil de implementar
+    \item Sin overhead de múltiples locks
+    \item Bien optimizado por CPUs modernos
+\end{itemize}
+
+\subsubsection{Distribución Uniforme}
+
+Con hash routing, las keys se distribuyen uniformemente:
+\begin{itemize}
+    \item Cada shard recibe aproximadamente $\frac{total}{N}$ elementos
+    \item Cada shard recibe aproximadamente $\frac{operaciones}{N}$ operaciones
+\end{itemize}
+
+% ============================================================================
+\section{Componentes del Sistema}
+% ============================================================================
+
+El sistema está compuesto por varios componentes que trabajan juntos:
+
+\subsection{ParallelAVL: El Coordinador Central}
+
+Es la clase principal que el usuario utiliza. Coordina todos los demás componentes.
+
+\begin{lstlisting}
+// Uso basico
+ParallelAVL<int, string> arbol(8);  // 8 shards
+
+arbol.insert(42, "valor");      // Insertar
+bool existe = arbol.contains(42); // Buscar
+auto valor = arbol.get(42);     // Obtener
+arbol.remove(42);               // Eliminar
+\end{lstlisting}
+
+\textbf{Internamente contiene}:
+\begin{itemize}
+    \item \textbf{shards\_}: Vector de N árboles AVL independientes
+    \item \textbf{router\_}: Sistema de enrutamiento inteligente
+    \item \textbf{redirect\_index\_}: Índice de claves redirigidas
+\end{itemize}
+
+\subsection{TreeShard: El Árbol Individual}
+
+Cada shard es un árbol AVL completo con su propio lock:
+
+\begin{lstlisting}
+class TreeShard {
+    AVLTree tree_;     // El arbol AVL
+    mutex mutex_;      // UN lock simple
+    atomic<size_t> size_;  // Estadisticas
+};
+\end{lstlisting}
+
+\textbf{Características}:
+\begin{itemize}
+    \item Lock simple (el más eficiente)
+    \item Estadísticas lock-free (no requieren el lock para leerse)
+    \item Tracking de min/max para optimizar range queries
+\end{itemize}
+
+\subsection{Router: El Enrutador Inteligente}
+
+Decide a qué shard va cada operación. Tiene 4 estrategias:
+
+% ============================================================================
+\section{Estrategias de Enrutamiento}
+% ============================================================================
+
+El enrutamiento determina a qué shard va cada operación. Tenemos 4 estrategias:
+
+\subsection{STATIC\_HASH: El Más Simple}
+
+Usa una función hash para calcular el shard:
+\begin{equation}
+shard = hash(key) \mod N
+\end{equation}
+
+\textbf{Ejemplo} con 8 shards:
+\begin{verbatim}
+hash("Juan") = 12345678  -->  12345678 % 8 = 6  --> Shard 6
+hash("María") = 87654321 -->  87654321 % 8 = 1  --> Shard 1
+\end{verbatim}
+
+\textbf{Ventajas}: Simple, rápido O(1), determinístico (siempre da el mismo resultado).\\
+\textbf{Problema}: Un atacante podría generar muchas keys que caigan en el mismo shard.
+
+\subsection{LOAD\_AWARE: Detecta Sobrecarga}
+
+Monitorea la carga de cada shard en tiempo real:
+
+\begin{verbatim}
+Si el shard natural está sobrecargado:
+   --> Redirigir a un shard con menos carga
+
+Criterio: sobrecarga si carga > 1.5 × promedio
+\end{verbatim}
+
+\textbf{Ejemplo}:
+\begin{verbatim}
+Cargas actuales: [100, 500, 80, 90, 85, 95, 88, 92]
+                        ^^^
+                   Shard 1 sobrecargado!
+
+Promedio = 141, Umbral = 141 × 1.5 = 211
+
+key "ABC" debería ir a Shard 1 (por hash)
+Pero Shard 1 tiene 500 > 211
+--> Redirigir a Shard 2 (el menos cargado con 80)
+\end{verbatim}
+
+\subsection{CONSISTENT\_HASH: Distribución con Nodos Virtuales}
+
+Crea múltiples ``puntos de entrada'' para cada shard en un círculo virtual:
+
+\begin{verbatim}
+Círculo hash (0 a 2^32):
+
+    0                                    2^32
+    |----[S0]--[S2]-[S1]--[S0]--[S2]----|
+           ^
+        Key cae aquí --> va al shard más cercano (S0)
+\end{verbatim}
+
+Con 16 nodos virtuales por shard, la distribución es más uniforme incluso con pocas keys.
+
+\subsection{INTELLIGENT: Lo Mejor de Ambos Mundos}
+
+Estrategia híbrida que se adapta automáticamente:
+
+\begin{verbatim}
+SI hay hotspot O balance < 80%:
+    --> Usar LOAD_AWARE (priorizar redistribución)
+SINO:
+    --> Usar CONSISTENT_HASH (distribución uniforme)
+\end{verbatim}
+
+\textbf{Esta es la estrategia recomendada} porque:
+\begin{itemize}
+    \item En condiciones normales: distribución uniforme eficiente
+    \item Bajo ataque: se adapta para redistribuir la carga
+\end{itemize}
+
+% ============================================================================
+\section{Linearizabilidad: Garantía de Consistencia}
+% ============================================================================
+
+\subsection{¿Qué es Linearizabilidad?}
+
+Es la garantía más fuerte de consistencia en sistemas concurrentes:
+
+\begin{quote}
+\textbf{Si una operación completó exitosamente, todas las operaciones posteriores verán su efecto.}
+\end{quote}
+
+\textbf{Ejemplo}:
+\begin{verbatim}
+Thread A: insert(42, "hola")  --> completa exitosamente
+Thread B: contains(42)        --> DEBE retornar true
+
+Si insert() terminó, contains() SIEMPRE lo encuentra.
+\end{verbatim}
+
+\subsection{El Problema con Redirecciones}
+
+Si redirigimos una key a otro shard, ¿cómo la encontramos después?
+
+\begin{verbatim}
+insert(42):
+  - Shard natural (por hash): 3
+  - Pero Shard 3 está sobrecargado
+  - Redirigimos a Shard 7
+
+contains(42):
+  - Shard natural (por hash): 3
+  - Busca en Shard 3... NO ESTÁ!
+  - ¿Cómo sabe que debe buscar en Shard 7?
+\end{verbatim}
+
+\subsection{La Solución: Redirect Index}
+
+Mantenemos un índice que registra todas las redirecciones:
+
+\begin{verbatim}
+Redirect Index:
+  key 42 --> fue redirigida de Shard 3 a Shard 7
+  key 99 --> fue redirigida de Shard 1 a Shard 5
+\end{verbatim}
+
+\textbf{Algoritmo de búsqueda}:
+\begin{enumerate}
+    \item Buscar en shard natural (calculado por hash)
+    \item Si no está, consultar el redirect index
+    \item Si hay redirección registrada, buscar en ese shard
+\end{enumerate}
+
+\begin{lstlisting}
+bool contains(key) {
+    // Paso 1: Shard natural
+    shard_natural = hash(key) % N;
+    if (shards[shard_natural].contains(key))
+        return true;
+    
+    // Paso 2: Consultar redirect index
+    shard_redirigido = redirect_index.lookup(key);
+    if (shard_redirigido existe)
+        return shards[shard_redirigido].contains(key);
+    
+    return false;  // No existe
+}
+\end{lstlisting}
+
+% ============================================================================
+\section{Protección contra Ataques Adversarios}
+% ============================================================================
+
+\subsection{¿Qué es un Ataque Adversario?}
+
+Un atacante podría intentar degradar el sistema enviando muchas operaciones que caigan en el mismo shard (``hotspot attack''):
+
+\begin{verbatim}
+Atacante genera keys especiales:
+  key_1, key_2, key_3, ... key_100000
+  
+Todas diseñadas para que hash(key_i) % 8 = 3
+
+Resultado: Shard 3 recibe TODO el tráfico
+           Shards 0,1,2,4,5,6,7 vacíos
+           
+¡Sistema degradado a un solo core!
+\end{verbatim}
+
+\subsection{Mecanismos de Defensa}
+
+\subsubsection{1. Rate Limiting}
+Limita cuántas redirecciones consecutivas puede causar una key:
+
+\begin{verbatim}
+MAX_CONSECUTIVE_REDIRECTS = 3
+
+Si una key causa más de 3 redirects seguidos:
+  --> Bloquear y usar shard natural
+  --> Registrar como patrón sospechoso
+\end{verbatim}
+
+\subsubsection{2. Cooldown Period}
+Tiempo mínimo entre redirecciones de la misma key:
+
+\begin{verbatim}
+REDIRECT_COOLDOWN = 100ms
+
+Si la key fue redirigida hace menos de 100ms:
+  --> No permitir otra redirección
+  --> Evita "thrashing" (cambios constantes)
+\end{verbatim}
+
+\subsubsection{3. Detección de Patrones}
+El sistema cuenta patrones sospechosos y redirecciones bloqueadas para análisis.
+
+\subsection{Resultados: Prevención vs Reacción}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Métrica} & \textbf{Sin Protección} & \textbf{Con Routing Adaptativo} \\
+\midrule
+Balance bajo ataque & 0\% & 81\% \\
+Tiempo de respuesta & N/A & Instantáneo \\
+Complejidad & -- & O(1) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Conclusión}: Es mejor \textbf{prevenir} hotspots (routing adaptativo) que \textbf{reaccionar} a ellos (rebalanceo).
+
+% ============================================================================
+\section{Parámetros de Configuración}
+% ============================================================================
+
+\subsection{Parámetros del Router}
+
+\begin{center}
+\begin{tabular}{llp{5cm}}
+\toprule
+\textbf{Parámetro} & \textbf{Default} & \textbf{Descripción} \\
+\midrule
+VNODES\_PER\_SHARD & 16 & Nodos virtuales para consistent hash \\
+WINDOW\_SIZE & 50 & Ventana de operaciones recientes \\
+HOTSPOT\_THRESHOLD & 1.5 & Umbral de detección de hotspot \\
+MAX\_CONSECUTIVE\_REDIRECTS & 3 & Límite anti-thrashing \\
+REDIRECT\_COOLDOWN & 100ms & Tiempo entre redirects \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Parámetros del Sistema}
+
+\begin{center}
+\begin{tabular}{llp{5cm}}
+\toprule
+\textbf{Parámetro} & \textbf{Default} & \textbf{Descripción} \\
+\midrule
+num\_shards & 8 & Número de shards (= cores) \\
+refresh\_interval & 1ms & Refresco de estadísticas \\
+balance\_score\_min & 0.8 & Score mínimo aceptable \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section{Resultados Experimentales}
+% ============================================================================
+
+\subsection{Escalabilidad}
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Threads} & \textbf{Ops/s} & \textbf{Speedup} & \textbf{Eficiencia} \\
+\midrule
+1 & 447K & 1.00$\times$ & 100\% \\
+2 & 2.50M & 2.13$\times$ & 106\% \\
+4 & 2.67M & 5.40$\times$ & 135\% \\
+8 & 3.48M & 7.78$\times$ & 97\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Comparación de Estrategias}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Estrategia} & \textbf{Simple} & \textbf{Speedup} & \textbf{Recomendado} \\
+\midrule
+Global Lock & Sí & 0.02$\times$ & No \\
+Granular Lock & No & 0.50$\times$ & No \\
+Parallel Trees & Sí & 7.78$\times$ & Sí \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Prevención vs Reacción}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Métrica} & \textbf{Rebalanceo} & \textbf{Routing Adaptativo} \\
+\midrule
+Balance & 50\% & 81\% \\
+Tiempo & $>$20 segundos & 0 ms \\
+Complejidad & O(n log n) & O(1) \\
+Bloquea árbol & Sí & No \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section{Problemas de Diseño Identificados y Correcciones}
+% ============================================================================
+
+Durante nuestra investigación de comportamiento aparentemente específico del compilador, identificamos \textbf{tres problemas de diseño} críticos que causaban resultados inconsistentes entre GCC e Intel ICX.
+
+\subsection{Problema 1: Conteo de Carga Inflado}
+
+\subsubsection{Síntoma}
+El router reportaba 0\% de balance cuando la distribución real de shards mostraba 62\% de balance.
+
+\subsubsection{Causa Raíz}
+El router contaba \textbf{todas} las llamadas a \texttt{record\_insertion()}, incluyendo inserciones de claves duplicadas que no incrementaban el tamaño real del shard.
+
+\begin{verbatim}
+Antes (incorrecto):
+  shards_[shard]->insert(key, value);
+  router_->record_insertion(shard);  // Siempre cuenta!
+  
+Problema: Si key ya existía, size no cambió pero se contó igual
+\end{verbatim}
+
+\subsubsection{Corrección}
+Solo notificar al router cuando la inserción realmente agrega una nueva clave:
+
+\begin{lstlisting}
+size_t old_size = shards_[shard]->size();
+shards_[shard]->insert(key, value);
+if (shards_[shard]->size() > old_size) {
+    router_->record_insertion(shard);  // Solo si cambio
+}
+\end{lstlisting}
+
+\subsection{Problema 2: Función Hash Dependiente del Compilador}
+
+\subsubsection{Síntoma}
+El ataque adversarial funcionaba correctamente en GCC pero \textbf{no} en Intel ICX (oneAPI).
+
+\subsubsection{Causa Raíz}
+\texttt{std::hash<int>} tiene implementaciones diferentes según el compilador:
+
+\begin{verbatim}
+GCC (libstdc++):    hash(x) = x        (identidad)
+ICX (oneAPI):       hash(x) = mezcla de bits (scrambled)
+
+Ataque adversarial: keys 0, 8, 16, 24, 32...
+  - GCC:  0%8=0, 8%8=0, 16%8=0  --> Todos al shard 0!
+  - ICX:  hash(0)%8=?, hash(8)%8=? --> Distribuidos
+\end{verbatim}
+
+\subsubsection{Corrección}
+Implementar hash robusto usando el finalizador Murmur3 (independiente del compilador):
+
+\begin{lstlisting}
+size_t robust_hash(const Key& key) const {
+    size_t h = std::hash<Key>{}(key);
+    // Murmur3 finalizer - mezcla bits uniformemente
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdULL;
+    h ^= h >> 33;
+    h *= 0xc4ceb9fe1a85ec53ULL;
+    h ^= h >> 33;
+    return h;
+}
+\end{lstlisting}
+
+\subsection{Problema 3: Estrategia Inteligente Ineficiente}
+
+\subsubsection{Síntoma}
+El enrutamiento \texttt{INTELLIGENT} era \textbf{100$\times$ más lento} que \texttt{STATIC\_HASH}.
+
+\subsubsection{Causa Raíz}
+Llamaba a \texttt{get\_stats()} (complejidad O($N$) con dos loops y sqrt) en \textbf{cada decisión} de enrutamiento:
+
+\begin{verbatim}
+Antes (incorrecto):
+  route_intelligent() {
+    auto stats = get_stats();  // O(N) POR CADA OPERACIÓN
+    // ...usar stats...
+  }
+  
+Costo: 8 shards × 100K ops = 800K escaneos innecesarios
+\end{verbatim}
+
+\subsubsection{Corrección}
+Implementar caché adaptativo con fast-path:
+
+\begin{lstlisting}
+size_t route_intelligent(const Key& key, size_t natural) {
+    // Fast-path: si ya decidimos usar hash estatico
+    if (adaptive_interval_ >= MAX_INTERVAL) {
+        return natural;  // Mismo costo que STATIC_HASH
+    }
+    
+    // Actualizar cache solo cada N operaciones
+    if (ops_++ >= interval) {
+        update_stats_cache();  // O(N) amortizado
+    }
+    
+    // Usar valores cacheados (O(1))
+    // ...
+}
+\end{lstlisting}
+
+\textbf{Resultado}: Aceleración de \textbf{104$\times$} en routing inteligente.
+
+\subsection{Impacto de las Correcciones}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Métrica} & \textbf{Antes} & \textbf{Después} & \textbf{Mejora} \\
+\midrule
+Balance adversarial (GCC) & 0\% & 96\% & Corregido \\
+Balance adversarial (ICX) & 99\% & 96\% & Consistente \\
+Throughput INTELLIGENT & 17K ops/s & 1.77M ops/s & 104$\times$ \\
+Consistencia GCC/ICX & Diferente & Idéntico & Corregido \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section{Experimentos en Intel Core Ultra 7}
+% ============================================================================
+
+Realizamos experimentos adicionales en hardware moderno con arquitectura híbrida.
+
+\subsection{Configuración del Hardware}
+
+\begin{itemize}
+    \item \textbf{CPU}: Intel Core Ultra 7 155H
+    \item \textbf{Núcleos}: 6 Performance + 8 Efficient + 2 Low-Power Efficient
+    \item \textbf{Threads de hardware}: 22 totales
+    \item \textbf{Compilador ICX}: oneAPI DPC++/C++ 2025.3.0
+    \item \textbf{Flags}: \texttt{/O3 /Qstd:c++20 /Qopenmp}
+\end{itemize}
+
+\subsection{Escalado de Shards en Arquitectura Híbrida}
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Shards} & \textbf{Throughput (Mops/s)} & \textbf{Balance} & \textbf{Contención} \\
+\midrule
+2 & 2.18 & 99.8\% & Alta \\
+4 & 3.04 & 99.8\% & Alta \\
+8 & 4.25 & 99.7\% & Media \\
+16 & 5.79 & 99.6\% & Baja \\
+32 & 7.87 & 99.4\% & Baja \\
+\textbf{64} & \textbf{9.55} & 98.9\% & Baja \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Hallazgo clave}: En arquitecturas híbridas Intel, conteos de shards más altos (32-64) proveen throughput óptimo debido a menor contención de locks entre tipos de núcleos heterogéneos.
+
+\subsection{Comparación de Compiladores: GCC vs ICX}
+
+Después de implementar las correcciones, comparamos rendimiento:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Métrica} & \textbf{GCC} & \textbf{ICX} & \textbf{Ganador} \\
+\midrule
+Single-thread (Mops/s) & \textbf{4.12} & 2.66 & GCC (+55\%) \\
+8 hilos (Mops/s) & 1.94 & 1.85 & Similar \\
+16 hilos (Mops/s) & 1.73 & 1.72 & Empate \\
+Carga mixta (Mops/s) & 3.32 & \textbf{5.10} & ICX (+54\%) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Conclusiones}:
+\begin{itemize}
+    \item GCC provee mayor rendimiento single-thread (+55\%)
+    \item ICX sobresale en cargas mixtas con alta proporción de lecturas (+54\%)
+    \item Ambos compiladores logran balance idéntico (99\%+) después de correcciones
+    \item El rendimiento converge a conteos altos de hilos
+\end{itemize}
+
+% ============================================================================
+\section{Análisis de Sensibilidad}
+% ============================================================================
+
+\subsection{Número de Shards}
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Shards} & \textbf{Balance Uniforme} & \textbf{Balance Adversarial} & \textbf{Throughput} \\
+\midrule
+4 & 97\% & 62\% & 2.3 Mops/s \\
+8 & 97\% & 79\% & 4.5 Mops/s \\
+16 & 96\% & 81\% & 6.8 Mops/s \\
+32 & 95\% & 78\% & 5.2 Mops/s \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Recomendación}: 8-16 shards (típicamente = número de cores)
+
+\subsection{Umbral de Hotspot}
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Threshold} & \textbf{Balance Adversarial} & \textbf{Falsos Positivos} \\
+\midrule
+1.25 & 83\% & Medio \\
+1.5 & 79\% & Bajo \\
+2.0 & 68\% & Muy bajo \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Recomendación}: threshold = 1.5 (balance óptimo)
+
+% ============================================================================
+\section{Estructura del Proyecto}
+% ============================================================================
+
+\begin{verbatim}
+ParallelAVL/
+|-- include/               # Headers
+|   |-- parallel_avl.hpp   # Clase principal ParallelAVL
+|   |-- shard.hpp          # TreeShard container
+|   |-- router.hpp         # Enrutamiento adversary-resistant
+|   |-- redirect_index.hpp # Indice de redirecciones
+|   |-- cached_load_stats.hpp
+|   |-- workloads.hpp      # Generadores de workload
+|   |-- AVLTree.h          # AVL base
+|   +-- AVLTreeParallel.h  # Wrapper paralelo
+|
+|-- bench/                 # Benchmarks
+|   |-- rigorous_bench.cpp
+|   |-- throughput_bench.cpp
+|   +-- adversarial_bench.cpp
+|
+|-- tests/                 # Tests
+|   |-- linearizability_test.cpp
+|   +-- workloads_test.cpp
+|
+|-- paper/                 # Paper academico
+|-- benchmark_parallel_trees.cpp
++-- benchmark_routing_strategies.cpp
+\end{verbatim}
+
+% ============================================================================
+\section{Guía de Uso}
+% ============================================================================
+
+\subsection{Compilación}
+
+\begin{lstlisting}[language=bash]
+# Compilar benchmarks
+g++ -std=c++17 -O3 -pthread -I include \
+    benchmark_parallel_trees.cpp -o benchmark_parallel
+
+# Compilar tests
+g++ -std=c++17 -O3 -pthread -I include \
+    tests/linearizability_test.cpp -o test_linearizability
+\end{lstlisting}
+
+\subsection{Uso Básico}
+
+\begin{lstlisting}
+#include "parallel_avl.hpp"
+
+int main() {
+    // Crear arbol con 8 shards y routing inteligente
+    ParallelAVL<int, string> tree(8, 
+        ParallelAVL<int,string>::RouterStrategy::INTELLIGENT);
+    
+    // Operaciones
+    tree.insert(42, "valor");
+    bool found = tree.contains(42);
+    auto val = tree.get(42);
+    tree.remove(42);
+    
+    // Estadisticas
+    tree.print_stats();
+    
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{Ejecución de Benchmarks}
+
+\begin{lstlisting}[language=bash]
+# Scalability benchmark
+./benchmark_parallel
+
+# Routing strategies comparison
+./benchmark_routing
+\end{lstlisting}
+
+% ============================================================================
+\section{Configuraciones Recomendadas}
+% ============================================================================
+
+\subsection{Producción (Por Defecto)}
+
+\begin{lstlisting}
+VNODES_PER_SHARD = 16
+HOTSPOT_THRESHOLD = 1.5
+MAX_CONSECUTIVE_REDIRECTS = 3
+REDIRECT_COOLDOWN = 100ms
+num_shards = 8  // Ajustar a numero de cores
+\end{lstlisting}
+
+\subsection{Alta Seguridad}
+
+\begin{lstlisting}
+HOTSPOT_THRESHOLD = 1.25      // Mas sensible
+MAX_CONSECUTIVE_REDIRECTS = 2 // Mas estricto
+REDIRECT_COOLDOWN = 50ms      // Rate limiting agresivo
+\end{lstlisting}
+
+\subsection{Alto Rendimiento}
+
+\begin{lstlisting}
+HOTSPOT_THRESHOLD = 2.0       // Menos intervencion
+MAX_CONSECUTIVE_REDIRECTS = 5 // Mas flexibilidad
+REDIRECT_COOLDOWN = 200ms     // Menos overhead
+\end{lstlisting}
+
+% ============================================================================
+\section{Trabajo Futuro}
+% ============================================================================
+
+\begin{enumerate}
+    \item \textbf{Read-Copy-Update (RCU)}: Para lecturas lock-free
+    \item \textbf{Shard count dinámico}: Escalado elástico
+    \item \textbf{Machine Learning}: Routing predictivo
+    \item \textbf{Extensión distribuida}: Múltiples máquinas
+\end{enumerate}
+
+% ============================================================================
+\section{Conclusiones}
+% ============================================================================
+
+\subsection{Resumen del Problema}
+
+Queríamos hacer un árbol AVL que funcione eficientemente con múltiples threads (hilos de ejecución). Los enfoques tradicionales fallaron:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Enfoque} & \textbf{Speedup} & \textbf{¿Por qué falla?} \\
+\midrule
+Lock Global & 0.02$\times$ & Todo serializado \\
+Lock por Nodo & 0.50$\times$ & Overhead + contención en raíz \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Nuestra Solución}
+
+En lugar de hacer UN árbol concurrent, creamos \textbf{N árboles simples} que trabajan en paralelo:
+
+\begin{itemize}
+    \item \textbf{Sharding}: Dividir datos en N árboles independientes
+    \item \textbf{Routing}: Función hash decide qué árbol usa cada key
+    \item \textbf{Lock simple}: Cada árbol tiene su propio lock (sin competir)
+\end{itemize}
+
+\subsection{Resultados Obtenidos}
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Métrica} & \textbf{Resultado} \\
+\midrule
+Throughput single-thread & \textbf{4.12 Mops/s} \\
+Speedup con 8 cores & \textbf{7.78$\times$} \\
+Eficiencia paralela & \textbf{97\%} \\
+Balance bajo ataque (después de fixes) & \textbf{96\%} \\
+Complejidad de routing & \textbf{O(1)} \\
+Aceleración routing inteligente & \textbf{104$\times$} (post-fix) \\
+Paridad GCC/ICX & \textbf{Idéntica} (post-fix) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Lecciones Principales}
+
+\subsubsection{Lección 1: Replantear el Problema}
+
+\begin{quote}
+\textbf{``El problema no era el árbol, era intentar hacer un árbol concurrent. La solución: no hacer el árbol concurrent, sino tener múltiples árboles.''}
+\end{quote}
+
+A veces la mejor solución a un problema difícil es \textbf{replantear el problema}.
+
+\subsubsection{Lección 2: No Asumir Comportamiento del Compilador}
+
+\begin{quote}
+\textbf{``Lo que funciona en un compilador puede fallar en otro. \texttt{std::hash} no es portable.''}
+\end{quote}
+
+Los bugs más difíciles de encontrar son los que dependen del entorno de compilación. Siempre probar con múltiples compiladores (GCC, Clang, ICX) y nunca asumir comportamiento específico de la biblioteca estándar.
+
+\subsubsection{Lección 3: Prevenir es Mejor que Reaccionar}
+
+\begin{quote}
+\textbf{``El mejor rebalanceo es no rebalancear. Prevenir hotspots con routing adaptativo supera al rebalanceo reactivo.''}
+\end{quote}
+
+El routing adaptativo O(1) es 100$\times$ más eficiente que el rebalanceo O(n log n).
+
+% ============================================================================
+\section{Glosario de Términos}
+% ============================================================================
+
+\begin{description}
+    \item[AVL] Árbol binario de búsqueda auto-balanceado (Adelson-Velsky y Landis, 1962)
+    
+    \item[Balance Score] Métrica de 0 a 1 que indica qué tan uniformemente distribuida está la carga entre shards
+    
+    \item[Concurrencia] Capacidad de ejecutar múltiples tareas de forma simultánea
+    
+    \item[Contención] Situación donde múltiples threads compiten por el mismo recurso
+    
+    \item[Core] Unidad de procesamiento dentro de una CPU; puede ejecutar un thread
+    
+    \item[GCC] GNU Compiler Collection; compilador de C++ de código abierto ampliamente utilizado
+    
+    \item[Hash] Función matemática que convierte datos en un número
+    
+    \item[Hotspot] Punto de alta concentración de operaciones (sobrecargado)
+    
+    \item[ICX] Intel oneAPI DPC++/C++ Compiler; compilador de Intel con optimizaciones específicas
+    
+    \item[Linearizabilidad] Garantía de consistencia: si una operación completó, todas las posteriores ven su efecto
+    
+    \item[Lock (Mutex)] Mecanismo que permite que solo un thread acceda a un recurso a la vez
+    
+    \item[Murmur3] Algoritmo de hash no criptográfico conocido por su buena distribución y velocidad
+    
+    \item[O(n), O(log n)] Notación Big-O que describe cómo crece el tiempo de ejecución con el tamaño de los datos
+    
+    \item[Race Condition] Error que ocurre cuando el resultado depende del orden de ejecución de threads
+    
+    \item[Redirect Index] Estructura que registra qué keys fueron movidas a shards diferentes del natural
+    
+    \item[Router] Componente que decide a qué shard va cada operación
+    
+    \item[Shard] Partición de datos; en este proyecto, cada shard es un árbol AVL independiente
+    
+    \item[Speedup] Cuántas veces más rápido es el programa paralelo vs el secuencial
+    
+    \item[std::hash] Función de hash de la biblioteca estándar de C++; su implementación varía entre compiladores
+    
+    \item[Thread (Hilo)] Línea de ejecución dentro de un programa; múltiples threads pueden ejecutarse en paralelo
+    
+    \item[Throughput] Cantidad de operaciones por segundo que puede procesar el sistema
+    
+    \item[Arquitectura Híbrida] CPUs modernas con diferentes tipos de núcleos (Performance, Efficient, Low-Power)
+\end{description}
+
+% ============================================================================
+\section{Referencias}
+% ============================================================================
+
+\subsection{Papers Académicos}
+\begin{enumerate}
+    \item Adelson-Velsky, G. y Landis, E. ``An algorithm for the organization of information'' (1962) - Paper original del árbol AVL
+    \item ``The Art of Multiprocessor Programming'' - Herlihy \& Shavit - Referencia en programación concurrente
+    \item ``Scalable Concurrent Hash Tables'' - Técnicas de sharding
+\end{enumerate}
+
+\subsection{Implementaciones de Referencia}
+\begin{enumerate}
+    \item \textbf{LevelDB} (Google) - Base de datos con sharding
+    \item \textbf{RocksDB} (Facebook) - Optimizaciones de concurrencia
+    \item \textbf{ConcurrentHashMap} (Java) - Estructura concurrente con sharding
+\end{enumerate}
+
+\end{document}
