@@ -13,7 +13,7 @@ all: benchmarks tests
 benchmarks: benchmark_parallel benchmark_routing
 
 # Future features (V2)
-future: bench_future test_distributed
+future: bench_future test_distributed bench_dynamic_shards
 
 benchmark_parallel: benchmark_parallel_trees.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
@@ -34,6 +34,9 @@ bench_adversarial: bench/adversarial_bench.cpp
 bench_future: bench/future_features_bench.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
+bench_dynamic_shards: bench/dynamic_shards_bench.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
+
 # Tests
 tests: test_linearizability test_workloads test_secops
 
@@ -47,6 +50,9 @@ test_secops: tests/secops_simulation.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 test_distributed: tests/distributed_test.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
+
+test_regression: tests/regression_dynamic_shards.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 # Paper
@@ -71,7 +77,7 @@ run-future: future
 # Clean
 clean:
 	rm -f benchmark_parallel benchmark_routing
-	rm -f bench_rigorous bench_throughput bench_adversarial bench_future
+	rm -f bench_rigorous bench_throughput bench_adversarial bench_future bench_dynamic_shards
 	rm -f test_linearizability test_workloads test_secops test_distributed
 	$(MAKE) -C paper clean
 
