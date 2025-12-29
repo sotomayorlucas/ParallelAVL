@@ -1,0 +1,62 @@
+\frametitle{\textcolor {cyberneon}{\faTools } Nuevo Servicio: AC-DoS Stress Tester}
+
+    \textcolor{cyberfg}{\textbf{Propuesta de Valor:} Auditar APIs de clientes para vulnerabilidades de complejidad algorítmica}
+
+    \vspace{0.3em}
+
+    \begin{columns}[T]
+        \begin{column}{0.52\textwidth}
+\begin{lstlisting}
+// AdversarialGenerator - Herramienta de Stress
+class AdversarialGenerator {
+  size_t num_shards_;
+
+public:
+  // Genera claves dirigidas a shard especifico
+  uint64_t generate_attack_key(size_t target) {
+    // Claves que hashean al shard objetivo
+    return target + (counter_++ * num_shards_);
+  }
+
+  // Genera patron de ataque hotspot
+  vector<uint64_t> generate_dos_payload(
+      size_t count, size_t target_shard) {
+    vector<uint64_t> payload;
+    for (size_t i = 0; i < count; ++i) {
+      payload.push_back(
+        generate_attack_key(target_shard));
+    }
+    return payload; // Todos al mismo shard
+  }
+};
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textcolor{cyberfg}{\textbf{Capacidades del Servicio:}}
+            \vspace{0.3em}
+
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Análisis de colisiones hash}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Escaneo de vulnerabilidad hotspot}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Stress testing Zipfian}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Pruebas de agotamiento de memoria}
+            \end{itemize}
+
+            \vspace{0.5em}
+            \begin{block}{Tipos de Carga de Trabajo}
+                \textcolor{cyberbg}{
+                \begin{itemize}
+                    \scriptsize
+                    \item Uniforme (línea base)
+                    \item Zipfian ($\alpha$=0.99)
+                    \item Secuencial (peor caso)
+                    \item \textbf{Adversarial} (dirigido)
+                \end{itemize}
+                }
+            \end{block}
+
+            \vspace{0.2em}
+            \textcolor{cyberorange}{\faExclamationTriangle\ \textbf{Solo para pruebas autorizadas}}
+        \end{column}
+    \end{columns}
+

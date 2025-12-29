@@ -1,0 +1,61 @@
+\frametitle{Implementation: Core C++ Code}
+
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textbf{ParallelAVL Insert:}
+\begin{lstlisting}
+bool insert(const Key& k, const Value& v) {
+  // Get target shard via adaptive routing
+  size_t shard_idx = router_->route(k);
+
+  // Check if key was redirected
+  auto redirect = redirect_index_->get(k);
+  if (redirect.has_value()) {
+    shard_idx = redirect.value();
+  }
+
+  // Per-shard lock (simple & efficient)
+  auto& shard = shards_[shard_idx];
+  unique_lock lock(shard->mutex_);
+
+  bool inserted = shard->tree_.insert(k, v);
+  if (inserted) {
+    shard->size_++;
+    shard->update_bounds(k);
+  }
+  return inserted;
+}
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \textbf{Linearizable Contains:}
+\begin{lstlisting}
+bool contains(const Key& k) const {
+  // 1. Check natural shard first
+  size_t natural = hash(k) % num_shards_;
+  {
+    auto& shard = shards_[natural];
+    shared_lock lock(shard->mutex_);
+    if (shard->tree_.contains(k))
+      return true;
+  }
+
+  // 2. Consult redirect index
+  auto redirect = redirect_index_->get(k);
+  if (redirect.has_value()) {
+    auto& shard = shards_[redirect.value()];
+    shared_lock lock(shard->mutex_);
+    return shard->tree_.contains(k);
+  }
+
+  return false; // Linearizable guarantee
+}
+\end{lstlisting}
+        \end{column}
+    \end{columns}
+
+    \vspace{0.3em}
+    \begin{center}
+        {\footnotesize \texttt{github.com/sotomayorlucas/AVLTree}}
+    \end{center}
+
