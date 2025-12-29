@@ -1,0 +1,62 @@
+\frametitle{\textcolor {cyberneon}{\faTools } New Service: AC-DoS Stress Tester}
+
+    \textcolor{cyberfg}{\textbf{Value Proposition:} Audit client APIs for algorithmic complexity vulnerabilities}
+
+    \vspace{0.3em}
+
+    \begin{columns}[T]
+        \begin{column}{0.52\textwidth}
+\begin{lstlisting}
+// AdversarialGenerator - Stress Testing Tool
+class AdversarialGenerator {
+  size_t num_shards_;
+
+public:
+  // Generate keys targeting specific shard
+  uint64_t generate_attack_key(size_t target) {
+    // Keys that hash to target shard
+    return target + (counter_++ * num_shards_);
+  }
+
+  // Generate hotspot attack pattern
+  vector<uint64_t> generate_dos_payload(
+      size_t count, size_t target_shard) {
+    vector<uint64_t> payload;
+    for (size_t i = 0; i < count; ++i) {
+      payload.push_back(
+        generate_attack_key(target_shard));
+    }
+    return payload; // All hit same shard
+  }
+};
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textcolor{cyberfg}{\textbf{Service Capabilities:}}
+            \vspace{0.3em}
+
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Hash collision analysis}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Hotspot vulnerability scan}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Zipfian stress testing}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Memory exhaustion probes}
+            \end{itemize}
+
+            \vspace{0.5em}
+            \begin{block}{Workload Types}
+                \textcolor{cyberbg}{
+                \begin{itemize}
+                    \scriptsize
+                    \item Uniform (baseline)
+                    \item Zipfian ($\alpha$=0.99)
+                    \item Sequential (worst-case)
+                    \item \textbf{Adversarial} (targeted)
+                \end{itemize}
+                }
+            \end{block}
+
+            \vspace{0.2em}
+            \textcolor{cyberorange}{\faExclamationTriangle\ \textbf{For authorized testing only}}
+        \end{column}
+    \end{columns}
+

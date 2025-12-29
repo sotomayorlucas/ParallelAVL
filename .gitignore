@@ -1,0 +1,32 @@
+# Compiled executables
+benchmark_parallel
+benchmark_routing
+bench_rigorous
+bench_throughput
+bench_adversarial
+test_linearizability
+test_workloads
+*.exe
+
+# Object files
+*.o
+*.obj
+
+# Paper build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.pdf
+paper/*.synctex.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

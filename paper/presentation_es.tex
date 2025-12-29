@@ -1,0 +1,672 @@
+% =============================================================================
+% Árboles AVL Paralelos de Grado Producción - Presentación Ciberseguridad (Español)
+% Autor: Lucas Sotomayor - División I+D
+% Enfoque: Mitigación de AC-DoS y Arquitectura Resiliente
+% =============================================================================
+
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% -----------------------------------------------------------------------------
+% Tema: Madrid con Esquema de Colores Cyber
+% -----------------------------------------------------------------------------
+\usetheme{Madrid}
+\usecolortheme{spruce}
+
+% Paleta de colores Cyber - Fondo oscuro con acentos neón
+\definecolor{cyberbg}{RGB}{18,18,28}
+\definecolor{cyberfg}{RGB}{220,220,220}
+\definecolor{cyberneon}{RGB}{0,255,136}
+\definecolor{cyberorange}{RGB}{255,136,0}
+\definecolor{cyberred}{RGB}{255,71,87}
+\definecolor{cyberpurple}{RGB}{138,43,226}
+\definecolor{codebg}{RGB}{30,30,45}
+\definecolor{cybergray}{RGB}{45,45,60}
+
+% Aplicar tema cyber
+\setbeamercolor{structure}{fg=cyberneon}
+\setbeamercolor{palette primary}{bg=cyberbg,fg=cyberfg}
+\setbeamercolor{palette secondary}{bg=cybergray,fg=cyberfg}
+\setbeamercolor{palette tertiary}{bg=cyberneon!80!black,fg=black}
+\setbeamercolor{titlelike}{fg=cyberneon}
+\setbeamercolor{frametitle}{bg=cyberbg,fg=cyberneon}
+\setbeamercolor{title}{fg=cyberneon}
+\setbeamercolor{subtitle}{fg=cyberorange}
+\setbeamercolor{author}{fg=cyberfg}
+\setbeamercolor{normal text}{fg=cyberbg}
+\setbeamercolor{block title}{bg=cyberneon!80!black,fg=black}
+\setbeamercolor{block body}{bg=cyberneon!10}
+\setbeamercolor{block title alerted}{bg=cyberred,fg=white}
+\setbeamercolor{block body alerted}{bg=cyberred!10}
+\setbeamercolor{block title example}{bg=cyberorange,fg=black}
+\setbeamercolor{block body example}{bg=cyberorange!10}
+\setbeamercolor{alerted text}{fg=cyberred}
+\setbeamercolor{item}{fg=cyberneon}
+
+% -----------------------------------------------------------------------------
+% Paquetes
+% -----------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,fit,backgrounds,calc,decorations.pathmorphing}
+\usepackage{listings}
+\usepackage{fontawesome5}
+\usepackage{xcolor}
+\usepackage{colortbl}
+
+% -----------------------------------------------------------------------------
+% Configuración de Listings - Estilo Cyber
+% -----------------------------------------------------------------------------
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\scriptsize\color{cyberfg},
+    keywordstyle=\color{cyberneon}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{cyberorange},
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{cyberneon},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2,
+    morekeywords={size_t,atomic,mutex,unique_lock,thread,uint64_t}
+}
+
+% -----------------------------------------------------------------------------
+% Estilos TikZ - Tema Cyber
+% -----------------------------------------------------------------------------
+\tikzstyle{attacker} = [rectangle, rounded corners, minimum width=2cm, 
+                        minimum height=1cm, text centered, draw=cyberred, 
+                        fill=cyberred!20, font=\small\bfseries, text=cyberred]
+\tikzstyle{component} = [rectangle, rounded corners, minimum width=2.5cm, 
+                         minimum height=0.8cm, text centered, draw=cyberneon, 
+                         fill=cyberneon!15, font=\small\bfseries]
+\tikzstyle{shard} = [rectangle, rounded corners, minimum width=1.5cm, 
+                     minimum height=0.6cm, text centered, draw=cyberorange, 
+                     fill=cyberorange!15, font=\scriptsize]
+\tikzstyle{arrow} = [thick, ->, >=stealth, color=cyberneon]
+\tikzstyle{attackarrow} = [thick, ->, >=stealth, color=cyberred, decorate, 
+                           decoration={snake, amplitude=1mm, segment length=3mm}]
+
+% -----------------------------------------------------------------------------
+% Metadatos
+% -----------------------------------------------------------------------------
+\title{\textbf{Árboles AVL Paralelos de Grado Producción}}
+\subtitle{Arquitectura Resiliente para Mitigación de AC-DoS}
+\author{Lucas Sotomayor\\{\small División I+D}}
+\date{\today}
+\institute{Consultoría de Seguridad}
+
+% =============================================================================
+% DOCUMENTO
+% =============================================================================
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% SLIDE 1: Título
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}[plain]
+    \begin{center}
+        \vspace{1cm}
+        {\huge \textcolor{cyberneon}{\faShield*}}
+        
+        \vspace{0.5cm}
+        {\Huge \textcolor{cyberneon}{\textbf{Árboles AVL Paralelos}}}
+        
+        \vspace{0.2cm}
+        {\Large \textcolor{cyberneon}{\textbf{de Grado Producción}}}
+        
+        \vspace{0.3cm}
+        {\Large \textcolor{cyberorange}{Arquitectura Resiliente para Mitigación de AC-DoS}}
+        
+        \vspace{1cm}
+        {\large \textcolor{cyberfg}{Lucas Sotomayor}}\\
+        {\normalsize \textcolor{gray}{División I+D $\bullet$ Consultoría de Seguridad}}
+        
+        \vspace{1cm}
+        {\small \textcolor{gray}{\today}}
+    \end{center}
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 2: La Amenaza - La Vulnerabilidad
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}{\textcolor{cyberneon}{\faExclamationTriangle} La Amenaza: DoS por Complejidad Algorítmica}
+    
+    \textcolor{cyberfg}{
+    \textbf{Vector de Ataque:} El adversario explota el comportamiento predecible de estructuras de datos
+    }
+    
+    \vspace{0.5em}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{alertblock}{Clases de Vulnerabilidad}
+                \begin{itemize}
+                    \item \textbf{CWE-407:} Complejidad Algorítmica Ineficiente
+                    \item \textbf{Hash Flooding:} Ataques por colisión
+                    \item \textbf{Saturación de Hotspot:} Sobrecarga de punto único
+                \end{itemize}
+            \end{alertblock}
+            
+            \vspace{0.3em}
+            \textcolor{cyberfg}{\textbf{Impacto:}}
+            \begin{itemize}
+                \item[\textcolor{cyberred}{\faTimesCircle}] \textcolor{cyberfg}{Degradación del servicio}
+                \item[\textcolor{cyberred}{\faTimesCircle}] \textcolor{cyberfg}{Agotamiento de recursos}
+                \item[\textcolor{cyberred}{\faTimesCircle}] \textcolor{cyberfg}{Indisponibilidad total}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[scale=0.8, transform shape]
+                % Flujo de ataque
+                \node[attacker] (atk) at (0,2) {\faUserSecret\ Atacante};
+                \node[component, fill=cyberred!30, draw=cyberred] (hash) at (0,0) {Hash Estático};
+                \node[shard, fill=cyberred!50] (s0) at (0,-1.8) {Shard 0: 100\%};
+                \node[shard, fill=gray!20, draw=gray] (s1) at (-2,-1.8) {Shard 1: 0\%};
+                \node[shard, fill=gray!20, draw=gray] (s2) at (2,-1.8) {Shard N: 0\%};
+                
+                \draw[attackarrow] (atk) -- (hash);
+                \draw[attackarrow] (hash) -- (s0);
+                
+                \node[below, font=\scriptsize\color{cyberred}] at (0,-2.5) {\textbf{0\% Disponibilidad}};
+            \end{tikzpicture}
+            \end{center}
+            
+            \vspace{0.3em}
+            \begin{center}
+                \fcolorbox{cyberred}{cyberred!10}{
+                    \textcolor{cyberred}{\textbf{Hash Estático + Input Adversario = DoS}}
+                }
+            \end{center}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 3: La Solución - Arquitectura Tree-of-Trees
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}{\textcolor{cyberneon}{\faProjectDiagram} La Solución: Arquitectura Árbol-de-Árboles}
+    
+    \begin{columns}[T]
+        \begin{column}{0.55\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[scale=0.75, transform shape]
+                % Contenedor principal
+                \node[component, minimum width=7cm, minimum height=5cm, fill=cybergray!50] (main) at (0,0) {};
+                \node[above, font=\bfseries\color{cyberneon}] at (main.north) {ParallelAVL (API Unificada)};
+                
+                % Router con defensa
+                \node[component, minimum width=5.5cm, fill=cyberneon!25] (router) at (0,1.5) {\faShield*\ Router Adaptativo};
+                
+                % Módulos de defensa
+                \node[shard, minimum width=2.2cm, fill=cyberorange!25] (cache) at (-1.3,0.6) {LoadStats};
+                \node[shard, minimum width=2.2cm, fill=cyberpurple!25, draw=cyberpurple] (pattern) at (1.5,0.6) {PatternTracker};
+                
+                % RedirectIndex
+                \node[component, minimum width=2.8cm, fill=cyberneon!15] (redirect) at (-1.5,-0.5) {RedirectIndex};
+                \node[shard, minimum width=1.5cm, fill=cyberorange!20, font=\tiny] (gc) at (-1.5,-1.2) {\faRecycle\ GC};
+                
+                % Shards - carga distribuida
+                \node[shard, fill=cyberneon!30] (s0) at (1.8,-0.2) {Shard 0};
+                \node[shard, fill=cyberneon!30] (s1) at (1.8,-0.8) {Shard 1};
+                \node[shard, fill=cyberneon!30] (s2) at (1.8,-1.4) {Shard 2};
+                \node[shard, fill=cyberneon!30] (sn) at (1.8,-2) {Shard N};
+                
+                % Flechas
+                \draw[arrow] (router) -- (cache);
+                \draw[arrow] (router) -- (pattern);
+                \draw[arrow] (router.south) -- ++(0,-0.2) -| (s0.north);
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \textcolor{cyberfg}{\textbf{Propiedades de Seguridad:}}
+            \vspace{0.3em}
+            
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{\textbf{Shared-Nothing:} Shards aislados}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{\textbf{Sin Punto Único:} Carga distribuida}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{\textbf{Degradación Gradual}}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{\textbf{Detección en Tiempo Real}}
+            \end{itemize}
+            
+            \vspace{0.5em}
+            \begin{block}{Reducción de Superficie de Ataque}
+                \textcolor{cyberbg}{
+                Un ataque de contención requiere comprometer \textbf{todos los N shards} simultáneamente
+                }
+            \end{block}
+            
+            \vspace{0.3em}
+            \textcolor{cyberorange}{\textbf{Resultado:} 97\% eficiencia paralela}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 4: Innovación Defensiva 1 - Enrutamiento Adaptativo
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}[fragile]{\textcolor{cyberneon}{\faRadiation} Defensa 1: Enrutamiento Adaptativo (Detección O(1))}
+    
+    \textcolor{cyberfg}{\textbf{Mecanismo:} Detección de hotspots en tiempo real con estadísticas cacheadas}
+    
+    \vspace{0.3em}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Algoritmo de Defensa Activa}
+            \textcolor{cyberbg}{
+            \begin{enumerate}
+                \scriptsize
+                \item Thread de fondo monitorea carga cada 1ms
+                \item Detecta anomalía: $carga_{max} > 1.5 \times \bar{carga}$
+                \item Cambia estrategia de routing dinámicamente
+                \item Desvía tráfico de shards saturados
+            \end{enumerate}
+            }
+            \end{block}
+            
+            \vspace{0.2em}
+\begin{lstlisting}
+// Consulta de Hotspot O(1)
+size_t get_safest_shard() {
+  return min_shard_.load(acquire);
+}
+
+// Deteccion de Anomalia
+bool is_under_attack() {
+  auto stats = cache_.get_stats();
+  return stats.max_load > 
+         1.5 * stats.avg_load;
+}
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \textcolor{cyberfg}{\textbf{Estrategias de Enrutamiento:}}
+            \vspace{0.3em}
+            
+            \begin{tabular}{@{}ll@{}}
+                \textcolor{gray}{Normal:} & \textcolor{cyberfg}{Hash Estático (rápido)} \\
+                \textcolor{cyberorange}{Varianza:} & \textcolor{cyberfg}{Hash Consistente} \\
+                \textcolor{cyberred}{Hotspot:} & \textcolor{cyberfg}{Load-Aware (defensa)} \\
+                \textcolor{cyberneon}{Auto:} & \textcolor{cyberfg}{Inteligente (híbrido)} \\
+            \end{tabular}
+            
+            \vspace{0.5em}
+            \begin{exampleblock}{Métrica Clave}
+                \textcolor{cyberbg}{
+                \textbf{Latencia de Detección:} O(1) \\
+                \textbf{Tiempo de Respuesta:} $<$ 1ms \\
+                \textbf{Falsos Positivos:} 0\%
+                }
+            \end{exampleblock}
+            
+            \vspace{0.3em}
+            \textcolor{cyberneon}{\faShield*\ \textbf{Proactivo, no reactivo}}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 5: Innovación Defensiva 2 - Rate Limiting y GC
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}[fragile]{\textcolor{cyberneon}{\faLock} Defensa 2: Rate Limiting y Protección de Memoria}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textcolor{cyberfg}{\textbf{\faStopwatch\ Controles Anti-Thrashing}}
+            \vspace{0.3em}
+            
+            \begin{alertblock}{Seguimiento de Patrones}
+                \textcolor{cyberbg}{
+                \begin{itemize}
+                    \item \textbf{Máx Redirects:} 3 por clave
+                    \item \textbf{Cooldown:} 100ms entre movimientos
+                    \item \textbf{Detección Sospechosa:} Bloquea patrones rápidos
+                \end{itemize}
+                }
+            \end{alertblock}
+            
+            \vspace{0.2em}
+\begin{lstlisting}
+struct RedirectPolicy {
+  static constexpr int MAX_REDIRECTS = 3;
+  static constexpr auto COOLDOWN = 100ms;
+  
+  bool can_redirect(Key k) {
+    auto& entry = history_[k];
+    if (entry.count >= MAX_REDIRECTS)
+      return false;
+    if (now() - entry.last < COOLDOWN)
+      return false;
+    return true;
+  }
+};
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \textcolor{cyberfg}{\textbf{\faRecycle\ Prevención de Agotamiento de Memoria}}
+            \vspace{0.3em}
+            
+            \begin{block}{Recolector de Basura}
+                \textcolor{cyberbg}{
+                \textbf{Amenaza:} Índice de redirects crece sin límite \\
+                \textbf{Defensa:} Limpieza periódica de entradas obsoletas
+                }
+            \end{block}
+            
+            \vspace{0.3em}
+            \textcolor{cyberfg}{\textbf{Resultados del GC:}}
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{1000 entradas $\rightarrow$ 28KB liberados}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{Tiempo de ejecución: 0.12ms}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{Cero pérdida de datos}
+                \item[\textcolor{cyberneon}{\faCheck}] \textcolor{cyberfg}{Operación thread-safe}
+            \end{itemize}
+            
+            \vspace{0.3em}
+            \begin{center}
+                \fcolorbox{cyberneon}{cyberneon!10}{
+                    \textcolor{cyberneon}{\textbf{Previene Agotamiento de Recursos}}
+                }
+            \end{center}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 6: Validación de Seguridad - Resultados
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}{\textcolor{cyberneon}{\faChartBar} Validación de Seguridad: Resistencia a Ataques}
+    
+    \textcolor{cyberfg}{\textbf{Prueba:} Carga adversaria dirigida (claves $0, N, 2N, \ldots$ saturando shard 0)}
+    
+    \vspace{0.5em}
+    
+    \begin{columns}[T]
+        \begin{column}{0.55\textwidth}
+            \begin{table}
+                \centering
+                \caption*{\textcolor{cyberfg}{\textbf{Balance Bajo Ataque Adversario}}}
+                \begin{tabular}{@{}lrrr@{}}
+                    \toprule
+                    \textcolor{cyberfg}{\textbf{Estrategia}} & \textcolor{cyberfg}{\textbf{Balance}} & \textcolor{cyberfg}{\textbf{Throughput}} & \textcolor{cyberfg}{\textbf{Estado}} \\
+                    & (\%) & (Mops/s) & \\
+                    \midrule
+                    Hash Estático & \textcolor{cyberred}{\textbf{0.0}} & 6.12 & \textcolor{cyberred}{\faTimesCircle} \\
+                    Load-Aware & 81.3 & 7.23 & \textcolor{cyberneon}{\faCheck} \\
+                    Consistente & 74.8 & 7.01 & \textcolor{cyberneon}{\faCheck} \\
+                    \textbf{Inteligente} & \textcolor{cyberneon}{\textbf{79.2}} & \textbf{7.31} & \textcolor{cyberneon}{\faShield*} \\
+                    \bottomrule
+                \end{tabular}
+            \end{table}
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \textcolor{cyberfg}{\textbf{Hallazgos Clave:}}
+            \vspace{0.3em}
+            
+            \begin{itemize}
+                \item[\textcolor{cyberred}{\faBomb}] \textcolor{cyberfg}{Estático: \textbf{Falla total}}
+                \item[\textcolor{cyberneon}{\faShield*}] \textcolor{cyberfg}{Inteligente: \textbf{79\% resiliente}}
+                \item[\textcolor{cyberorange}{\faArrowUp}] \textcolor{cyberfg}{\textbf{+18\%} throughput bajo fuego}
+            \end{itemize}
+            
+            \vspace{0.5em}
+            \begin{block}{Garantía de Seguridad}
+                \textcolor{cyberbg}{
+                \textbf{Degradación gradual} -- el sistema permanece operacional bajo ataque sostenido
+                }
+            \end{block}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.5em}
+    \begin{center}
+        \fcolorbox{cyberneon}{cyberbg}{
+            \textcolor{cyberneon}{\faShield*\ \textbf{El sistema degrada suavemente -- NO colapsa}}
+        }
+    \end{center}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 7: Rendimiento en Condiciones Normales
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}{\textcolor{cyberneon}{\faRocket} Rendimiento: Seguridad Sin Sacrificio}
+    
+    \textcolor{cyberfg}{\textbf{Premisa:} Las medidas de seguridad no deben degradar el rendimiento normal}
+    
+    \vspace{0.5em}
+    
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{table}
+                \centering
+                \caption*{\textcolor{cyberfg}{\textbf{Escalabilidad (Carga Uniforme)}}}
+                \begin{tabular}{@{}lrrr@{}}
+                    \toprule
+                    \textcolor{cyberfg}{\textbf{Hilos}} & \textcolor{cyberfg}{\textbf{Speedup}} & \textcolor{cyberfg}{\textbf{Eficiencia}} \\
+                    \midrule
+                    1 & 1.00$\times$ & 100\% \\
+                    2 & 1.95$\times$ & 97.5\% \\
+                    4 & 3.84$\times$ & 96.0\% \\
+                    \textbf{8} & \textcolor{cyberneon}{\textbf{7.78$\times$}} & \textcolor{cyberneon}{\textbf{97.3\%}} \\
+                    \bottomrule
+                \end{tabular}
+            \end{table}
+            
+            \vspace{0.3em}
+            \textcolor{cyberfg}{\textbf{Percentiles de Latencia (P99):} $<$ 5$\mu$s}
+        \end{column}
+        \begin{column}{0.47\textwidth}
+            \textcolor{cyberfg}{\textbf{Comparación:}}
+            \vspace{0.3em}
+            
+            \begin{tabular}{@{}lr@{}}
+                \textcolor{gray}{Lock Global} & \textcolor{cyberred}{0.02$\times$} \\
+                \textcolor{gray}{Fine-Grained} & \textcolor{cyberred}{0.33$\times$} \\
+                \textcolor{gray}{Lock-Free} & \textcolor{cyberorange}{4.2$\times$} \\
+                \textcolor{cyberneon}{\textbf{Nuestra Solución}} & \textcolor{cyberneon}{\textbf{7.78$\times$}} \\
+            \end{tabular}
+            
+            \vspace{0.5em}
+            \begin{exampleblock}{Overhead de Seguridad}
+                \textcolor{cyberbg}{
+                El routing adaptativo añade \textbf{$<$3\%} de overhead vs hash estático en condiciones normales
+                }
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 8: Nuevo Servicio - AC-DoS Stress Tester
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}[fragile]{\textcolor{cyberneon}{\faTools} Nuevo Servicio: AC-DoS Stress Tester}
+    
+    \textcolor{cyberfg}{\textbf{Propuesta de Valor:} Auditar APIs de clientes para vulnerabilidades de complejidad algorítmica}
+    
+    \vspace{0.3em}
+    
+    \begin{columns}[T]
+        \begin{column}{0.52\textwidth}
+\begin{lstlisting}
+// AdversarialGenerator - Herramienta de Stress
+class AdversarialGenerator {
+  size_t num_shards_;
+  
+public:
+  // Genera claves dirigidas a shard especifico
+  uint64_t generate_attack_key(size_t target) {
+    // Claves que hashean al shard objetivo
+    return target + (counter_++ * num_shards_);
+  }
+  
+  // Genera patron de ataque hotspot
+  vector<uint64_t> generate_dos_payload(
+      size_t count, size_t target_shard) {
+    vector<uint64_t> payload;
+    for (size_t i = 0; i < count; ++i) {
+      payload.push_back(
+        generate_attack_key(target_shard));
+    }
+    return payload; // Todos al mismo shard
+  }
+};
+\end{lstlisting}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textcolor{cyberfg}{\textbf{Capacidades del Servicio:}}
+            \vspace{0.3em}
+            
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Análisis de colisiones hash}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Escaneo de vulnerabilidad hotspot}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Stress testing Zipfian}
+                \item[\textcolor{cyberneon}{\faSearch}] \textcolor{cyberfg}{Pruebas de agotamiento de memoria}
+            \end{itemize}
+            
+            \vspace{0.5em}
+            \begin{block}{Tipos de Carga de Trabajo}
+                \textcolor{cyberbg}{
+                \begin{itemize}
+                    \scriptsize
+                    \item Uniforme (línea base)
+                    \item Zipfian ($\alpha$=0.99)
+                    \item Secuencial (peor caso)
+                    \item \textbf{Adversarial} (dirigido)
+                \end{itemize}
+                }
+            \end{block}
+            
+            \vspace{0.2em}
+            \textcolor{cyberorange}{\faExclamationTriangle\ \textbf{Solo para pruebas autorizadas}}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 9: Conclusión e Impacto
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}{\textcolor{cyberneon}{\faFlagCheckered} Conclusión: Seguridad por Diseño}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textcolor{cyberfg}{\textbf{Logros Técnicos:}}
+            \vspace{0.3em}
+            
+            \begin{itemize}
+                \item[\textcolor{cyberneon}{\faRocket}] \textcolor{cyberfg}{\textbf{7.78$\times$} speedup (8 cores)}
+                \item[\textcolor{cyberneon}{\faShield*}] \textcolor{cyberfg}{\textbf{79\%} balance bajo ataque}
+                \item[\textcolor{cyberneon}{\faClock}] \textcolor{cyberfg}{\textbf{O(1)} detección de anomalías}
+                \item[\textcolor{cyberneon}{\faRecycle}] \textcolor{cyberfg}{\textbf{Cero} fugas de memoria}
+                \item[\textcolor{cyberneon}{\faCheckDouble}] \textcolor{cyberfg}{\textbf{19} suites de validación}
+            \end{itemize}
+            
+            \vspace{0.5em}
+            \textcolor{cyberfg}{\textbf{Amenazas Mitigadas:}}
+            \begin{itemize}
+                \item[\textcolor{cyberred}{\faTimes}] \textcolor{cyberfg}{CWE-407 (complejidad AC)}
+                \item[\textcolor{cyberred}{\faTimes}] \textcolor{cyberfg}{Hash flooding}
+                \item[\textcolor{cyberred}{\faTimes}] \textcolor{cyberfg}{Agotamiento de memoria}
+                \item[\textcolor{cyberred}{\faTimes}] \textcolor{cyberfg}{Ataques de contención}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \textcolor{cyberfg}{\textbf{Valor de Negocio:}}
+            \vspace{0.3em}
+            
+            \begin{exampleblock}{Para Clientes}
+                \textcolor{cyberbg}{
+                \begin{itemize}
+                    \item Almacenes clave-valor de alto rendimiento
+                    \item Indexación resistente a DoS
+                    \item Servicio de auditoría para APIs
+                \end{itemize}
+                }
+            \end{exampleblock}
+            
+            \vspace{0.5em}
+            \begin{block}{Principio Central}
+                \textcolor{cyberbg}{
+                \centering
+                \textbf{Prevención $>$ Reacción} \\[0.3em]
+                El routing adaptativo previene hotspots \textit{antes} de que se conviertan en incidentes
+                }
+            \end{block}
+        \end{column}
+    \end{columns}
+    
+\end{frame}
+}
+
+% -----------------------------------------------------------------------------
+% SLIDE 10: Final - Disponibilidad Garantizada
+% -----------------------------------------------------------------------------
+{
+\setbeamercolor{background canvas}{bg=cyberbg}
+\begin{frame}[plain]
+    \begin{center}
+        \vspace{1.5cm}
+        {\Huge \textcolor{cyberneon}{\faShield*}}
+        
+        \vspace{0.8cm}
+        {\Huge \textcolor{cyberfg}{\textbf{Disponibilidad Garantizada}}}
+        
+        \vspace{0.3cm}
+        {\Large \textcolor{cyberorange}{\textit{Incluso Bajo Fuego}}}
+        
+        \vspace{1.5cm}
+        {\large \textcolor{cyberneon}{Alto Rendimiento + Seguridad por Diseño}}
+        
+        \vspace{1cm}
+        {\normalsize \textcolor{gray}{Lucas Sotomayor $\bullet$ División I+D}}
+        
+        \vspace{0.5cm}
+        {\small \textcolor{gray}{\faGithub\ github.com/sotomayorlucas/AVLTree}}
+    \end{center}
+\end{frame}
+}
+
+\end{document}
