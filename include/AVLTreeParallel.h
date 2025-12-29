@@ -139,7 +139,7 @@ public:
     }
 
     // Get: Solo lock el árbol relevante
-    const Value& get(const Key& key) const override {
+    Value get(const Key& key) const override {
         size_t shard_idx = getShardIndex(key);
         auto& shard = shards_[shard_idx];
 
