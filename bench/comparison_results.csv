@@ -1,0 +1,4 @@
+Implementation,Insert_ms,Contains_ms,Remove_ms,Mixed_ops_sec,Balance_score,Elements,Shards
+AVLTreeParallel (Original),20.519,1.119,11.688,7.23066e+06,0.992781,100000,8
+ParallelAVL (New + Dynamic),22.888,15.634,14.627,4.82114e+06,0.990519,100000,8
+DynamicShardedTree,27.008,18.812,42.552,1.05918e+06,0.871543,100000,8

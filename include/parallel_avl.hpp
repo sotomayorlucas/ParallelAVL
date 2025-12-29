@@ -1,6 +1,30 @@
 #ifndef PARALLEL_AVL_HPP
 #define PARALLEL_AVL_HPP
 
+// =============================================================================
+// ParallelAVL - Árbol AVL Paralelo con Escalado Dinámico
+// =============================================================================
+//
+// Características:
+//   - Sharding automático con N árboles AVL independientes
+//   - Router adversario-resistente con detección de hotspots
+//   - Escalado dinámico: add_shard(), remove_shard(), force_rebalance()
+//   - Garantía de linearizabilidad via RedirectIndex
+//   - Range queries optimizadas
+//
+// Estrategias de routing:
+//   - STATIC_HASH:    Hash simple, máximo rendimiento
+//   - LOAD_AWARE:     Redistribuye bajo carga desbalanceada  
+//   - INTELLIGENT:    Adaptativo con detección de ataques (default)
+//
+// Uso:
+//   ParallelAVL<int, string> tree(8);  // 8 shards
+//   tree.insert(42, "value");
+//   tree.contains(42);  // true
+//   tree.add_shard();   // Escalar a 9 shards
+//
+// =============================================================================
+
 #include "shard.hpp"
 #include "router.hpp"
 #include "redirect_index.hpp"
@@ -10,14 +34,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
-
-// Parallel AVL Tree con garantías de linearizabilidad
-//
-// Invariante clave: Una key K siempre se puede encontrar buscando en:
-//   1. Shard natural: hash(K) % N
-//   2. Si no está ahí, consultar redirect_index para ver si fue redirigida
-//
-// Esto garantiza linearizabilidad: Si insert(K) completó, contains(K) lo encuentra.
+#include <cmath>
 
 template<typename Key, typename Value>
 class ParallelAVL {
@@ -50,6 +67,10 @@ private:
     // Estadísticas globales (mutable para actualizar en métodos const)
     mutable std::atomic<size_t> total_ops_{0};
     mutable std::atomic<size_t> redirect_index_hits_{0};
+    
+    // Flags de optimización
+    std::atomic<bool> topology_changed_{false};  // Necesita búsqueda exhaustiva
+    std::atomic<bool> has_redirects_{false};     // Fast-path: evitar redirect_index si vacío
 
 public:
     explicit ParallelAVL(
@@ -93,38 +114,53 @@ public:
             // Si hubo redirección, registrar en el índice
             if (target_shard != natural_shard) {
                 redirect_index_->record_redirect(key, natural_shard, target_shard);
+                has_redirects_.store(true, std::memory_order_relaxed);
             }
         }
     }
 
-    // Contains con linearizabilidad garantizada
+    // Contains con linearizabilidad garantizada - OPTIMIZADO
     bool contains(const Key& key) const {
-        total_ops_.fetch_add(1, std::memory_order_relaxed);
-
-        // Paso 1: Buscar en shard natural
+        // Fast path: buscar en shard natural (caso común)
         size_t natural_shard = robust_hash(key) % num_shards_;
-
+        
         if (shards_[natural_shard]->contains(key)) {
             return true;
         }
 
-        // Paso 2: Consultar redirect index
-        auto redirected_shard = redirect_index_->lookup(key);
-
-        if (redirected_shard.has_value()) {
-            redirect_index_hits_.fetch_add(1, std::memory_order_relaxed);
-            return shards_[*redirected_shard]->contains(key);
+        // Solo continuar si hay posibilidad de que esté en otro lugar
+        if (!has_redirects_.load(std::memory_order_relaxed) && 
+            !topology_changed_.load(std::memory_order_relaxed)) {
+            return false;  // Fast exit: no hay redirects ni cambios de topología
         }
 
-        // No encontrada
+        total_ops_.fetch_add(1, std::memory_order_relaxed);
+
+        // Consultar redirect index
+        if (has_redirects_.load(std::memory_order_relaxed)) {
+            auto redirected_shard = redirect_index_->lookup(key);
+            if (redirected_shard.has_value()) {
+                redirect_index_hits_.fetch_add(1, std::memory_order_relaxed);
+                return shards_[*redirected_shard]->contains(key);
+            }
+        }
+
+        // Búsqueda exhaustiva solo si hubo cambio de topología
+        if (topology_changed_.load(std::memory_order_acquire)) {
+            for (size_t i = 0; i < num_shards_; ++i) {
+                if (i == natural_shard) continue;
+                if (shards_[i]->contains(key)) {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
-    // Get con linearizabilidad
+    // Get con linearizabilidad - OPTIMIZADO
     std::optional<Value> get(const Key& key) const {
-        total_ops_.fetch_add(1, std::memory_order_relaxed);
-
-        // Paso 1: Buscar en shard natural
+        // Fast path: buscar en shard natural
         size_t natural_shard = robust_hash(key) % num_shards_;
         auto result = shards_[natural_shard]->get(key);
 
@@ -132,12 +168,32 @@ public:
             return result;
         }
 
-        // Paso 2: Consultar redirect index
-        auto redirected_shard = redirect_index_->lookup(key);
+        // Fast exit si no hay redirects ni cambios
+        if (!has_redirects_.load(std::memory_order_relaxed) && 
+            !topology_changed_.load(std::memory_order_relaxed)) {
+            return std::nullopt;
+        }
 
-        if (redirected_shard.has_value()) {
-            redirect_index_hits_.fetch_add(1, std::memory_order_relaxed);
-            return shards_[*redirected_shard]->get(key);
+        total_ops_.fetch_add(1, std::memory_order_relaxed);
+
+        // Consultar redirect index
+        if (has_redirects_.load(std::memory_order_relaxed)) {
+            auto redirected_shard = redirect_index_->lookup(key);
+            if (redirected_shard.has_value()) {
+                redirect_index_hits_.fetch_add(1, std::memory_order_relaxed);
+                return shards_[*redirected_shard]->get(key);
+            }
+        }
+
+        // Búsqueda exhaustiva solo si hubo cambio de topología
+        if (topology_changed_.load(std::memory_order_acquire)) {
+            for (size_t i = 0; i < num_shards_; ++i) {
+                if (i == natural_shard) continue;
+                auto res = shards_[i]->get(key);
+                if (res.has_value()) {
+                    return res;
+                }
+            }
         }
 
         return std::nullopt;
@@ -164,6 +220,17 @@ public:
                 router_->record_removal(*redirected_shard);
                 redirect_index_->remove(key);
                 return true;
+            }
+        }
+
+        // Si hubo cambio de topología, buscar en todos los shards
+        if (topology_changed_.load(std::memory_order_acquire)) {
+            for (size_t i = 0; i < num_shards_; ++i) {
+                if (i == natural_shard) continue;
+                if (shards_[i]->remove(key)) {
+                    router_->record_removal(i);
+                    return true;
+                }
             }
         }
 
@@ -319,6 +386,108 @@ public:
         redirect_index_->clear();
         total_ops_.store(0, std::memory_order_relaxed);
         redirect_index_hits_.store(0, std::memory_order_relaxed);
+    }
+
+    // =========================================================================
+    // Dynamic Scaling - Integrado desde DynamicShardedTree
+    // =========================================================================
+
+    // Agregar un nuevo shard al sistema
+    // Las keys existentes permanecen donde están, nuevas inserciones
+    // se distribuyen entre todos los shards (incluyendo el nuevo)
+    void add_shard() {
+        // Crear nuevo shard
+        shards_.push_back(std::make_unique<Shard>());
+        num_shards_++;
+
+        // Recrear router con nuevo número de shards
+        auto strategy = router_->get_stats().balance_score > 0.9 
+            ? RouterStrategy::INTELLIGENT 
+            : RouterStrategy::LOAD_AWARE;
+        router_ = std::make_unique<Router>(num_shards_, strategy);
+
+        // Marcar que hubo cambio de topología para habilitar búsqueda exhaustiva
+        topology_changed_.store(true, std::memory_order_release);
+    }
+
+    // Eliminar el último shard y redistribuir sus elementos
+    void remove_shard() {
+        if (num_shards_ <= 1) return;
+
+        size_t removing_id = num_shards_ - 1;
+
+        // Extraer todos los elementos del shard a eliminar
+        std::vector<std::pair<Key, Value>> to_redistribute;
+        extract_shard_data(removing_id, to_redistribute);
+
+        // Eliminar el shard
+        shards_.pop_back();
+        num_shards_--;
+
+        // Recrear router
+        router_ = std::make_unique<Router>(num_shards_, RouterStrategy::INTELLIGENT);
+
+        // Marcar cambio de topología para búsqueda exhaustiva
+        topology_changed_.store(true, std::memory_order_release);
+
+        // Limpiar redirect entries que apuntaban al shard eliminado
+        redirect_index_->gc_expired([removing_id](const Key&) {
+            return removing_id;  // Forzar eliminación de entries obsoletas
+        });
+
+        // Re-insertar datos del shard eliminado (van a sus nuevos shards naturales)
+        for (const auto& [key, value] : to_redistribute) {
+            size_t target = router_->route(key);
+            shards_[target]->insert(key, value);
+            router_->record_insertion(target);
+        }
+    }
+
+    // Forzar rebalanceo: redistribuir TODAS las keys según routing actual
+    // Útil después de agregar/quitar varios shards o detectar desbalance severo
+    void force_rebalance() {
+        // Paso 1: Extraer todos los datos
+        std::vector<std::pair<Key, Value>> all_data;
+        for (size_t i = 0; i < num_shards_; ++i) {
+            extract_shard_data(i, all_data);
+        }
+
+        // Paso 2: Limpiar todos los shards y redirect index
+        for (auto& shard : shards_) {
+            shard->clear();
+        }
+        redirect_index_->clear();
+
+        // Paso 3: Recrear router fresco para routing consistente
+        router_ = std::make_unique<Router>(num_shards_, RouterStrategy::STATIC_HASH);
+
+        // Paso 4: Re-insertar todo usando hash simple (sin redirecciones)
+        for (const auto& [key, value] : all_data) {
+            size_t target = robust_hash(key) % num_shards_;
+            shards_[target]->insert(key, value);
+            router_->record_insertion(target);
+        }
+
+        // Reset stats y flag de topología - ahora todo está en su shard natural
+        total_ops_.store(all_data.size(), std::memory_order_relaxed);
+        redirect_index_hits_.store(0, std::memory_order_relaxed);
+        topology_changed_.store(false, std::memory_order_release);
+    }
+
+    // Obtener número de shards
+    size_t get_num_shards() const {
+        return num_shards_;
+    }
+
+    // Balance score (0.0 - 1.0, mayor es mejor)
+    double get_balance_score() const {
+        return router_->get_stats().balance_score;
+    }
+
+private:
+    // Helper: extraer datos de un shard específico
+    void extract_shard_data(size_t shard_id, std::vector<std::pair<Key, Value>>& out) {
+        shards_[shard_id]->extract_all(std::back_inserter(out));
     }
 };
 

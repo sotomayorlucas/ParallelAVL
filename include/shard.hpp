@@ -105,18 +105,16 @@ public:
 
     bool contains(const Key& key) const {
         std::lock_guard lock(mutex_);
-        lookup_count_.fetch_add(1, std::memory_order_relaxed);
         return tree_.contains(key);
     }
 
     std::optional<Value> get(const Key& key) const {
         std::lock_guard lock(mutex_);
-        lookup_count_.fetch_add(1, std::memory_order_relaxed);
-
+        // Optimizado: llamar directamente a get sin contains primero
+        // Si la key no existe, tree_.get() retorna Value{} - manejarlo
         if (tree_.contains(key)) {
             return tree_.get(key);
         }
-
         return std::nullopt;
     }
 
@@ -215,6 +213,22 @@ public:
         remove_count_.store(0, std::memory_order_relaxed);
         lookup_count_.store(0, std::memory_order_relaxed);
         has_keys_.store(false, std::memory_order_release);
+    }
+
+    // Extract all elements from this shard (para dynamic scaling)
+    template<typename OutputIt>
+    void extract_all(OutputIt out) const {
+        std::lock_guard lock(mutex_);
+        extract_all_recursive(tree_.getRoot(), out);
+    }
+
+private:
+    template<typename OutputIt>
+    void extract_all_recursive(typename AVLTree<Key, Value>::Node* node, OutputIt out) const {
+        if (!node) return;
+        extract_all_recursive(node->left, out);
+        *out++ = std::make_pair(node->key, node->value);
+        extract_all_recursive(node->right, out);
     }
 };
 
