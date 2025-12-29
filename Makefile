@@ -29,12 +29,15 @@ bench_adversarial: bench/adversarial_bench.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 # Tests
-tests: test_linearizability test_workloads
+tests: test_linearizability test_workloads test_secops
 
 test_linearizability: tests/linearizability_test.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 test_workloads: tests/workloads_test.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
+
+test_secops: tests/secops_simulation.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 # Paper
@@ -55,7 +58,7 @@ run-benchmarks: benchmarks
 clean:
 	rm -f benchmark_parallel benchmark_routing
 	rm -f bench_rigorous bench_throughput bench_adversarial
-	rm -f test_linearizability test_workloads
+	rm -f test_linearizability test_workloads test_secops
 	$(MAKE) -C paper clean
 
 help:

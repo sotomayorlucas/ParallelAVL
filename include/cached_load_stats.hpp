@@ -7,6 +7,39 @@
 #include <chrono>
 #include <cmath>
 
+// ============================================================================
+// COMPILER BARRIER FIX FOR HYBRID CPU OPTIMIZATION BUG
+// ============================================================================
+// Problema: En procesadores híbridos (Intel Core Ultra), GCC -O3 puede aplicar
+// Loop Invariant Code Motion (LICM) que saca las lecturas atómicas del bucle,
+// causando que la defensa anti-Hash-Flooding falle (0% balance bajo ataque).
+//
+// Solución: Insertar barreras de compilador para forzar que cada lectura
+// se realice efectivamente en cada iteración del bucle.
+//
+// Opciones de barrera:
+//   1. asm volatile("" ::: "memory")      - Barrera de compilador (más ligera)
+//   2. std::atomic_signal_fence(seq_cst)  - Barrera portable C++11
+//
+// Uso: Compilar con -DUSE_COMPILER_BARRIER para activar el fix.
+// ============================================================================
+
+#ifdef USE_COMPILER_BARRIER
+    // Barrera de compilador: previene que el compilador reordene u optimice
+    // lecturas/escrituras de memoria alrededor de este punto.
+    // NO genera instrucciones de CPU, solo afecta al optimizador.
+    #if defined(__GNUC__) || defined(__clang__)
+        #define PAVL_COMPILER_BARRIER() asm volatile("" ::: "memory")
+    #else
+        // Fallback portable usando atomic_signal_fence
+        // Nota: atomic_signal_fence es más restrictivo que necesario, pero portable
+        #define PAVL_COMPILER_BARRIER() std::atomic_signal_fence(std::memory_order_seq_cst)
+    #endif
+#else
+    // Sin barrera - comportamiento original
+    #define PAVL_COMPILER_BARRIER() ((void)0)
+#endif
+
 // CachedLoadStats: Fix para hacer el routing realmente O(1)
 //
 // Problema: El load-aware routing del paper itera sobre todos los shards
@@ -53,7 +86,29 @@ private:
         size_t max_idx = 0;
 
         for (size_t i = 0; i < loads_.size(); ++i) {
+            // ================================================================
+            // COMPILER BARRIER: Forzar lectura fresca en cada iteración
+            // ================================================================
+            // Sin esta barrera, GCC -O3 puede aplicar LICM (Loop Invariant 
+            // Code Motion) y cachear el valor de loads_[i] fuera del bucle,
+            // especialmente en E-cores de CPUs híbridas donde el scheduler
+            // del SO puede mover el thread durante la ejecución.
+            //
+            // Esto causa que el background thread lea valores stale, haciendo
+            // que la detección de hotspots falle y la defensa anti-DoS no
+            // funcione (Balance Score = 0% bajo ataque).
+            //
+            // La barrera le dice al compilador: "la memoria puede haber 
+            // cambiado, no asumas que puedes reusar lecturas anteriores".
+            // ================================================================
+            PAVL_COMPILER_BARRIER();
+            
             size_t load = loads_[i].load(std::memory_order_relaxed);
+            
+            // Segunda barrera después de la lectura para asegurar que el
+            // valor leído se use antes de cualquier optimización posterior
+            PAVL_COMPILER_BARRIER();
+            
             total += load;
 
             if (load < min_load) {
